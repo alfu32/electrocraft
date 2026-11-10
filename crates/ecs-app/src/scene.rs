@@ -86,6 +86,8 @@ pub struct SceneOpts {
     pub current_dots: bool,
     /// Seconds of animation time for the current dots.
     pub anim_t: f64,
+    /// Current-dot speed factor (settings).
+    pub dot_speed: f64,
     pub ppp: f32,
     pub hover: Option<Item>,
     pub hover_pin: Option<P2>,
@@ -111,6 +113,7 @@ impl Default for SceneOpts {
             volt_colors: true,
             current_dots: true,
             anim_t: 0.0,
+            dot_speed: crate::settings::DOT_SPEED,
             ppp: 1.0,
             hover: None,
             hover_pin: None,
@@ -523,7 +526,13 @@ pub fn build(
     }
     // Current dots along wires.
     for (from, to, i) in &flows {
-        dots_along(&mut out, *from, *to, dot_speed(*i), opts.anim_t);
+        dots_along(
+            &mut out,
+            *from,
+            *to,
+            dot_speed(*i) * opts.dot_speed,
+            opts.anim_t,
+        );
     }
     // Junctions.
     for j in doc.junctions() {
@@ -625,7 +634,13 @@ pub fn build(
             } else {
                 (pins[1].1, pins[0].1)
             };
-            dots_along(&mut out, from, to, dot_speed(i), opts.anim_t);
+            dots_along(
+                &mut out,
+                from,
+                to,
+                dot_speed(i) * opts.dot_speed,
+                opts.anim_t,
+            );
         }
         if opts.thumbnail {
             continue;

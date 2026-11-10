@@ -18,6 +18,7 @@ mod packages;
 mod samples;
 mod scene;
 mod scope;
+mod settings;
 mod theme;
 
 use app::{App, Cmd};

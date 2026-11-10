@@ -6,6 +6,59 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
+import snap  # noqa: E402
+
+
+class SnapTests(unittest.TestCase):
+    def test_snap_names_follow_snapcraft(self):
+        self.assertEqual(snap.snap_name("1.2.3", "x86_64"), "electrocraft_1.2.3_amd64.snap")
+        self.assertEqual(snap.snap_name("1.2.3", "aarch64"), "electrocraft_1.2.3_arm64.snap")
+
+    def test_library_closure_skips_what_core24_and_mesa_provide(self):
+        deps = {
+            "libXcursor.so.1": ["libXrender.so.1", "libXfixes.so.3", "libX11.so.6", "libc.so.6"],
+            "libXrender.so.1": ["libX11.so.6"],
+            "libxkbcommon-x11.so.0": ["libxkbcommon.so.0", "libxcb.so.1", "libxcb-xkb.so.1"],
+            "libxcb-xkb.so.1": ["libxcb.so.1", "libXau.so.6"],
+            "libextra.so.2": [],
+        }
+        deps["libXi.so.6"] = ["libXext.so.6", "libextra.so.2"]
+        got = snap.library_closure(
+            roots=("libXcursor.so.1", "libxkbcommon-x11.so.0", "libXi.so.6"),
+            resolve=lambda n: Path("/lib") / n,
+            deps=lambda p: deps.get(p.name, []),
+        )
+        self.assertEqual(
+            sorted(got),
+            ["libXcursor.so.1", "libXi.so.6", "libXrender.so.1", "libextra.so.2", "libxcb-xkb.so.1", "libxkbcommon-x11.so.0"],
+        )
+
+    def test_staged_snap_is_strict_core24_with_gpu_content_and_three_apps(self):
+        import tempfile
+        with tempfile.TemporaryDirectory() as t:
+            t = Path(t)
+            bins = t / "bin"
+            bins.mkdir()
+            for b in snap.BINARIES:
+                (bins / b).write_text("#!/bin/sh\n")
+            lib = t / "libXi.so.6"
+            lib.write_text("")
+            root = t / "prime"
+            snap.stage(root, "1.2.3", "aarch64", bins, {"libXi.so.6": lib}, None)
+            meta = (root / "meta/snap.yaml").read_text()
+            for want in ("name: electrocraft", "version: '1.2.3'", "base: core24", "architectures: [arm64]",
+                         "confinement: strict", "grade: stable", "default-provider: mesa-2404",
+                         "command: bin/electrocraft\n", "command: bin/electrocraft-cli", "command: bin/electrocraft-datasheet"):
+                self.assertIn(want, meta)
+            launcher = (root / "bin/electrocraft").read_text()
+            self.assertIn("gpu-2404-provider-wrapper", launcher)
+            self.assertIn('"$SNAP/opt/electrocraft/electrocraft"', launcher)
+            self.assertIn('LD_LIBRARY_PATH="$SNAP/usr/lib', launcher)
+            self.assertTrue((root / "usr/lib/libXi.so.6").is_file())
+            desktop = common.parse_desktop((root / "meta/gui/electrocraft.desktop").read_text())["Desktop Entry"]
+            self.assertEqual(desktop["Icon"], "${SNAP}/meta/gui/electrocraft.png")
+            self.assertTrue(desktop["Exec"].startswith("electrocraft"))
+            self.assertNotIn("X-AppImage-Version", desktop)
 
 
 class ReleaseTests(unittest.TestCase):

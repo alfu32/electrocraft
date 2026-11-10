@@ -174,6 +174,12 @@ pub fn catalog() -> Vec<Info> {
             json!({"panel": "components | inspector | scopes"}),
         ),
         info("app.home", "Start screen", none.clone()),
+        info("app.settings", "Settings", none.clone()),
+        info(
+            "view.dot_speed",
+            "Current-dot speed factor",
+            json!({"value": "0.05 to 4 (default 0.35)"}),
+        ),
         info("app.palette", "Command palette", none.clone()),
         info("app.shortcuts", "Keyboard shortcuts", none.clone()),
         info("app.about", "About", none.clone()),
@@ -310,6 +316,8 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             _ => "scopes",
         }),
         "app.home" => Cmd::Home,
+        "app.settings" => Cmd::Settings,
+        "view.dot_speed" => Cmd::DotSpeed(n(args, "value")?),
         "app.palette" => Cmd::Palette,
         "app.shortcuts" => Cmd::Shortcuts,
         "app.about" => Cmd::About,
@@ -340,10 +348,10 @@ mod tests {
         for i in catalog() {
             assert!(ids.insert(i.id), "duplicate id {}", i.id);
             let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0});
-            let args = if i.id == "sim.control" {
-                json!({"refdes": "S1", "state": "closed", "value": 1.0})
-            } else {
-                args
+            let args = match i.id {
+                "sim.control" => json!({"refdes": "S1", "state": "closed", "value": 1.0}),
+                "view.dot_speed" => json!({"value": 0.5}),
+                _ => args,
             };
             from_id(i.id, &args).unwrap_or_else(|e| panic!("{}: {e}", i.id));
         }

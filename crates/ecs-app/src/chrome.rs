@@ -322,9 +322,8 @@ impl App {
                         if icon_button(ui, Icon::Help, 26.0, "Keyboard shortcuts", true, false) {
                             cmd = Some(Cmd::Shortcuts);
                         }
-                        if icon_button(ui, Icon::Settings, 26.0, "About Electrocraft", true, false)
-                        {
-                            cmd = Some(Cmd::About);
+                        if icon_button(ui, Icon::Settings, 26.0, "Settings", true, false) {
+                            cmd = Some(Cmd::Settings);
                         }
                     });
                 });
@@ -1558,7 +1557,9 @@ impl App {
                                 .default_open(k < 4)
                                 .open(if q.is_empty() { None } else { Some(true) })
                                 .show(ui, |ui| {
+                                    let names: Vec<String> = defs.iter().map(|d| d.meta.name.clone()).collect();
                                     for d in defs {
+                                        let twin = names.iter().filter(|n| **n == d.meta.name).count() > 1;
                                         let (row, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 28.0), Sense::click());
                                         let active = matches!(&self.tool, Tool::Place { def, .. } if *def == d.id);
                                         if active {
@@ -1568,8 +1569,12 @@ impl App {
                                         }
                                         let thumb = Rect::from_min_size(row.min + vec2(4.0, 3.0), vec2(34.0, 22.0));
                                         paint_symbol(ui.painter(), thumb, &d.symbol, if active { c::ACTIVE_TAB_TEXT } else { c::ICON });
-                                        ui.painter().text(row.min + vec2(46.0, 14.0), Align2::LEFT_CENTER, &d.meta.name, theme::regular(13.0), c::TEXT);
-                                        let resp = resp.on_hover_text(&d.meta.description);
+                                        let name_r = ui.painter().text(row.min + vec2(46.0, 14.0), Align2::LEFT_CENTER, &d.meta.name, theme::regular(13.0), c::TEXT);
+                                        // Same name twice (a user copy of a reference): tell them apart by id.
+                                        if twin {
+                                            ui.painter().text(name_r.right_center() + vec2(6.0, 0.0), Align2::LEFT_CENTER, &d.id, theme::mono(10.0), c::TEXT_FAINT);
+                                        }
+                                        let resp = resp.on_hover_text(format!("{}\n{}", d.meta.description, d.id).trim().to_string());
                                         if resp.clicked() {
                                             cmd = Some(Cmd::Tool(Tool::Place { def: d.id.clone(), rot: 0, mirror: false }));
                                         }
@@ -2197,6 +2202,7 @@ impl App {
         let title = match which {
             "about" => "About Electrocraft",
             "shortcuts" => "Keyboard Shortcuts",
+            "settings" => "Settings",
             _ => "Problems",
         };
         egui::Window::new(RichText::new(title).font(theme::bold(14.0)))
@@ -2205,6 +2211,40 @@ impl App {
             .resizable(false)
             .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
             .show(ctx, |ui| match which {
+                "settings" => {
+                    ui.set_width(380.0);
+                    ui.label(RichText::new("Live simulation").font(theme::bold(13.0)));
+                    let before = (self.settings.clone(), self.grid, self.volt_colors, self.current_dots);
+                    egui::Grid::new("settings").num_columns(2).spacing(vec2(14.0, 8.0)).show(ui, |ui| {
+                        ui.label("Current dot speed");
+                        ui.horizontal(|ui| {
+                            ui.add(egui::Slider::new(&mut self.settings.dot_speed, 0.05..=4.0).logarithmic(true).show_value(false));
+                            ui.label(RichText::new(format!("{:.2}×", self.settings.dot_speed)).font(theme::mono(11.5)));
+                            if ui.small_button("Reset").clicked() {
+                                self.settings.dot_speed = crate::settings::DOT_SPEED;
+                            }
+                        });
+                        ui.end_row();
+                        ui.label("");
+                        ui.label(RichText::new("Dots speed up by one step per decade of current (1 nA to 1 A); this scales all of them.").color(c::TEXT_DIM).small());
+                        ui.end_row();
+                        ui.label("Show");
+                        ui.vertical(|ui| {
+                            ui.checkbox(&mut self.current_dots, "Current dots");
+                            ui.checkbox(&mut self.volt_colors, "Voltage colours on wires");
+                            ui.checkbox(&mut self.grid, "Grid");
+                        });
+                        ui.end_row();
+                    });
+                    self.settings.grid = self.grid;
+                    self.settings.volt_colors = self.volt_colors;
+                    self.settings.current_dots = self.current_dots;
+                    if (self.settings.clone(), self.grid, self.volt_colors, self.current_dots) != before {
+                        self.settings.save();
+                    }
+                    ui.add_space(4.0);
+                    ui.label(RichText::new("Saved for next time.").color(c::TEXT_FAINT).small());
+                }
                 "about" => {
                     ui.set_width(380.0);
                     ui.horizontal(|ui| {

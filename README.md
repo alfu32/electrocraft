@@ -63,6 +63,7 @@ python3 scripts/capture_screenshots.py      # refresh docs/screenshots (Xvfb, xd
 ```sh
 cargo build --release --locked -p ecs-app -p ecs-cli -p datasheet-tool
 python3 scripts/release/appimage.py        # dist/electrocraft-X.Y.Z-linux-<arch>.AppImage + .zsync
+python3 scripts/release/snap.py            # dist/electrocraft_X.Y.Z_<arch>.snap (core24, strict, mesa-2404)
 python3 scripts/release/portable.py --target x86_64-unknown-linux-gnu
 ```
 

@@ -114,6 +114,10 @@ pub enum Cmd {
     NextTab,
     /// Save every modified document.
     SaveAll,
+    /// The settings dialog.
+    Settings,
+    /// Current-dot speed factor.
+    DotSpeed(f64),
     /// Add a scope channel: a formula over net and part codes.
     ScopeAdd {
         name: String,
@@ -230,6 +234,9 @@ pub struct App {
     pub clipboard: Clipboard,
     pub built: Built,
     built_rev: u64,
+    /// Generation of the last netlist sent to the simulation thread: its
+    /// snapshots match `built` from then on (parameter edits update in place).
+    sim_gen: u64,
     pub rev: u64,
     pub sim: SimHandle,
     pub live: Live,
@@ -256,6 +263,7 @@ pub struct App {
     pub grid: bool,
     pub volt_colors: bool,
     pub current_dots: bool,
+    pub settings: crate::settings::Settings,
     pub show_components: bool,
     pub show_inspector: bool,
     pub show_scopes: bool,
@@ -325,6 +333,7 @@ impl App {
             clipboard: Clipboard::default(),
             built: Built::default(),
             built_rev: u64::MAX,
+            sim_gen: u64::MAX,
             rev: 0,
             sim: SimHandle::spawn(),
             live: Live::default(),
@@ -348,6 +357,7 @@ impl App {
             grid: true,
             volt_colors: true,
             current_dots: true,
+            settings: crate::settings::Settings::default(),
             show_components: true,
             show_inspector: true,
             show_scopes: true,
@@ -376,6 +386,10 @@ impl App {
             user_lib: Default::default(),
             package_problems: Vec::new(),
         };
+        app.settings = crate::settings::Settings::load();
+        app.grid = app.settings.grid;
+        app.volt_colors = app.settings.volt_colors;
+        app.current_dots = app.settings.current_dots;
         app.package_problems = crate::packages::load_packages(&mut app.cat);
         app.user_lib.poll(&mut app.cat);
         let cat = Catalog::builtin();
@@ -567,6 +581,7 @@ impl App {
                 generation: self.rev + 1,
             });
             self.rev += 1;
+            self.sim_gen = self.rev;
             return;
         }
         self.active = k.min(self.tabs.len() - 1);
@@ -724,6 +739,7 @@ impl App {
                 netlist: built.netlist.clone(),
                 generation: self.rev,
             });
+            self.sim_gen = self.rev;
             for p in &self.doc.parts {
                 for (k, v) in &p.states {
                     self.sim.send(SimCmd::SetState {
@@ -863,7 +879,7 @@ impl App {
             running: snap.running,
             ..Default::default()
         };
-        if snap.generation == self.built_rev && !snap.node_voltages.is_empty() {
+        if snap.generation == self.sim_gen && !snap.node_voltages.is_empty() {
             for (name, &k) in &self.built.nodes {
                 if let Some(v) = snap.node_voltages.get(k) {
                     live.net_v.insert(name.clone(), *v);
@@ -1120,9 +1136,17 @@ impl App {
                 ];
                 self.vp.zoom_at(ctr, 0.8);
             }
-            Cmd::ToggleGrid => self.grid = !self.grid,
-            Cmd::ToggleVolts => self.volt_colors = !self.volt_colors,
-            Cmd::ToggleDots => self.current_dots = !self.current_dots,
+            Cmd::ToggleGrid | Cmd::ToggleVolts | Cmd::ToggleDots => {
+                match cmd {
+                    Cmd::ToggleGrid => self.grid = !self.grid,
+                    Cmd::ToggleVolts => self.volt_colors = !self.volt_colors,
+                    _ => self.current_dots = !self.current_dots,
+                }
+                self.settings.grid = self.grid;
+                self.settings.volt_colors = self.volt_colors;
+                self.settings.current_dots = self.current_dots;
+                self.settings.save();
+            }
             Cmd::TogglePanel(p) => match p {
                 "components" => self.show_components = !self.show_components,
                 "inspector" => self.show_inspector = !self.show_inspector,
@@ -1154,6 +1178,11 @@ impl App {
             }
             Cmd::Shortcuts => self.dialog = Some("shortcuts"),
             Cmd::About => self.dialog = Some("about"),
+            Cmd::Settings => self.dialog = Some("settings"),
+            Cmd::DotSpeed(v) => {
+                self.settings.dot_speed = v.clamp(0.05, 4.0);
+                self.settings.save();
+            }
             Cmd::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             Cmd::Analysis(which) => self.analysis.dialog = Some(which),
             Cmd::RunAnalysis(which) => {
@@ -1184,7 +1213,21 @@ impl App {
                         let p = dir.join(format!("example-{name}"));
                         if !p.exists() {
                             // Reference copies with their own ids so they do not clash.
-                            let _ = std::fs::write(p, src.replace("id: \"user.", "id: \"example."));
+                            let src = src.replace("id: \"user.", "id: \"example.");
+                            // ...and their own names, so the palette shows both.
+                            let src = match src.find("name: \"").map(|k| k + 7) {
+                                Some(k) => match src[k..].find('"') {
+                                    Some(e) => format!(
+                                        "{}{} (example){}",
+                                        &src[..k],
+                                        &src[k..k + e],
+                                        &src[k + e..]
+                                    ),
+                                    None => src,
+                                },
+                                None => src,
+                            };
+                            let _ = std::fs::write(p, src);
                         }
                     }
                     let _ = std::process::Command::new(if cfg!(target_os = "windows") {
@@ -1568,6 +1611,7 @@ impl App {
             volt_colors: self.volt_colors,
             current_dots: self.current_dots,
             anim_t: self.started.elapsed().as_secs_f64(),
+            dot_speed: self.settings.dot_speed,
             ppp,
             hover: self.hover,
             hover_pin: if matches!(self.tool, Tool::Wire | Tool::Probe) {
@@ -2156,5 +2200,56 @@ mod tab_tests {
             app.close_tab(app.active, true);
         }
         assert!(!app.has_doc && app.home && app.tabs.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod live_tests {
+    use super::*;
+
+    /// Poll the simulation thread until live values arrive (or give up).
+    fn wait_live(app: &mut App) -> bool {
+        for _ in 0..300 {
+            app.sync_sim(false);
+            app.poll_sim();
+            if !app.live.net_v.is_empty() && !app.live.part_i.is_empty() {
+                return true;
+            }
+            std::thread::sleep(std::time::Duration::from_millis(10));
+        }
+        false
+    }
+
+    #[test]
+    fn live_values_survive_parameter_edits_and_new_parts() {
+        let mut app = App::new(true);
+        let s = crate::samples::all()
+            .into_iter()
+            .find(|s| s.id == "astable")
+            .unwrap();
+        let doc = (s.build)(&app.cat);
+        app.load_doc(doc, None);
+        assert!(wait_live(&mut app), "no live values after loading");
+        // A parameter edit updates the running circuit in place.
+        let r1 = app.doc.parts.iter().find(|p| p.refdes == "R1").unwrap().id;
+        app.edit(Command::SetParam {
+            part: r1,
+            name: "R".into(),
+            value: "560".into(),
+        });
+        app.live = Live::default();
+        assert!(
+            wait_live(&mut app),
+            "live values stopped after a parameter edit"
+        );
+        // A part that is not wired in leaves the netlist as it was.
+        let def = app.cat.def("core.resistor").unwrap().clone();
+        let p = app.cat.new_part(&app.doc, &def, [2000.0, 2000.0]);
+        app.edit(Command::AddPart(p));
+        app.live = Live::default();
+        assert!(
+            wait_live(&mut app),
+            "live values stopped after adding a part"
+        );
     }
 }

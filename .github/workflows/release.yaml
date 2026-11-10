@@ -2,7 +2,8 @@
 # literal version in crates/ecs-app/Cargo.toml), following Meshcraft:
 #   gh workflow run release.yaml --ref X.Y.Z
 # Produces AppGlider-friendly AppImages (electrocraft-X.Y.Z-linux-<arch>.AppImage
-# + .zsync), portable archives and checksums, then publishes one release.
+# + .zsync), snaps (electrocraft_X.Y.Z_<arch>.snap, installed and launched in the
+# job), portable archives and checksums, then publishes one release.
 name: Release
 
 on:
@@ -63,6 +64,38 @@ jobs:
       - run: cargo build --release --locked -p ecs-app -p ecs-cli -p datasheet-tool
       - run: python3 scripts/release/appimage.py --arch ${{ matrix.arch }}
       - run: python3 scripts/release/portable.py --target ${{ matrix.target }}
+      - name: Snap (core24, strict, mesa-2404 GPU content)
+        run: |
+          sudo apt-get install -y squashfs-tools xvfb imagemagick
+          python3 scripts/release/snap.py --arch ${{ matrix.arch }} --output dist
+      - name: Install the snap and check that it starts and paints a window
+        run: |
+          version=$(python3 -c 'import sys; sys.path.insert(0, "scripts/release"); import common; print(common.app_version())')
+          sudo snap install core24
+          sudo snap install mesa-2404
+          sudo snap install --dangerous dist/electrocraft_*.snap
+          sudo snap connect electrocraft:gpu-2404 mesa-2404:gpu-2404 || true
+          snap connections electrocraft
+          test "$(snap run electrocraft --version)" = "electrocraft $version"
+          mkdir -p target/snap-smoke
+          Xvfb :97 -screen 0 1280x800x24 &
+          sleep 2
+          env -u WAYLAND_DISPLAY DISPLAY=:97 snap run electrocraft --sample rc-lowpass --size 1280x800 > target/snap-smoke/app.log 2>&1 &
+          pid=$!
+          sleep 15
+          kill -0 "$pid"
+          DISPLAY=:97 import -window root target/snap-smoke/window.png
+          kill "$pid" || true
+          colours=$(convert target/snap-smoke/window.png -format '%k' info:)
+          echo "distinct colours: $colours"
+          test "$colours" -gt 50
+      - name: Keep the snap check output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: snap-smoke-${{ matrix.arch }}
+          path: target/snap-smoke
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}

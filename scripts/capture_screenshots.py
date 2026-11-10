@@ -193,6 +193,10 @@ def main():
         s.shot("28-document-tabs.png", wait=2.0)
         s.close()
 
+        s = run("--sample", "astable", commands=[{"id": "app.settings", "args": {}}])
+        s.shot("29-settings.png", wait=2.0)
+        s.close()
+
         s = run("--sample", "rc-lowpass", commands=[{"id": "analysis.run", "args": {"kind": "ac"}}])
         s.shot("17-analysis-ac-bode.png", wait=3.0)
         s.close()
