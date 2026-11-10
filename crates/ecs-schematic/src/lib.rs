@@ -9,8 +9,9 @@ use std::collections::{BTreeMap, BTreeSet, HashMap};
 pub use symbols::{GRID, P2, Prim, Symbol};
 use thiserror::Error;
 
-/// Current `.ecs` format version.
-pub const FORMAT_VERSION: u32 = 1;
+/// Current `.ecs` format version. 2 added the per-part `sourcing` block
+/// (version 1 files load with it empty).
+pub const FORMAT_VERSION: u32 = 2;
 
 /// Stable object id within a document.
 pub type Id = u64;
@@ -45,6 +46,70 @@ pub struct Part {
     /// Program source of a microcontroller (assembly).
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub code: String,
+    /// Where to buy it (spec ADD-01 section 8).
+    #[serde(default, skip_serializing_if = "Sourcing::is_empty")]
+    pub sourcing: Sourcing,
+}
+
+/// Sourcing of one component: the manufacturer part, a preferred vendor and
+/// what each vendor offered when last looked up. Providers are keys
+/// (`jlcpcb`, `digikey`, `mouser`, `tme`, `farnell`).
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct Sourcing {
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub mpn: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub manufacturer: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub preferred_vendor: String,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub vendors: Vec<VendorRef>,
+}
+
+impl Sourcing {
+    pub fn is_empty(&self) -> bool {
+        *self == Sourcing::default()
+    }
+    /// The entry for a provider.
+    pub fn vendor(&self, provider: &str) -> Option<&VendorRef> {
+        self.vendors.iter().find(|v| v.provider == provider)
+    }
+    /// The preferred vendor's entry, if any.
+    pub fn preferred(&self) -> Option<&VendorRef> {
+        self.vendor(&self.preferred_vendor)
+    }
+    /// Add or replace a provider's entry.
+    pub fn upsert(&mut self, v: VendorRef) {
+        match self.vendors.iter_mut().find(|x| x.provider == v.provider) {
+            Some(slot) => *slot = v,
+            None => self.vendors.push(v),
+        }
+    }
+}
+
+/// One vendor's offer for a component. Price and stock are what the vendor
+/// reported at `fetched_at` (seconds since the Unix epoch); providers whose
+/// terms forbid storing them leave them empty.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
+pub struct VendorRef {
+    pub provider: String,
+    pub vendor_pn: String,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub url: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub unit_price: Option<f64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub price_qty: Option<u32>,
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub currency: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stock: Option<i64>,
+    #[serde(default, skip_serializing_if = "is_zero")]
+    pub fetched_at: u64,
+}
+
+fn is_zero(v: &u64) -> bool {
+    *v == 0
 }
 
 /// A wire as an orthogonal polyline.
@@ -329,10 +394,12 @@ impl Schematic {
 
     /// Load from JSON, migrating older format versions.
     pub fn from_json(text: &str) -> Result<Self, FileError> {
-        let doc: Schematic = serde_json::from_str(text)?;
+        let mut doc: Schematic = serde_json::from_str(text)?;
         if doc.format_version > FORMAT_VERSION {
             return Err(FileError::TooNew(doc.format_version));
         }
+        // 1 → 2: parts gain an (empty) sourcing block; nothing else changes.
+        doc.format_version = FORMAT_VERSION;
         Ok(doc)
     }
 
@@ -724,7 +791,7 @@ pub struct Connectivity {
 /// An editing command. Every command is one undo step.
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
-    AddPart(Part),
+    AddPart(Box<Part>),
     AddWire(Vec<P2>),
     AddLabel {
         at: P2,
@@ -792,6 +859,8 @@ pub enum Command {
         part: Id,
         code: String,
     },
+    /// Replace the sourcing of several parts (one undo step).
+    SetSourcing(Vec<(Id, Sourcing)>),
 }
 
 /// Copied items for paste and duplicate.
@@ -875,7 +944,7 @@ impl Schematic {
                     self.next_id = self.next_id.max(p.id + 1);
                 }
                 created.push(Item::Part(p.id));
-                self.parts.push(p);
+                self.parts.push(*p);
             }
             Command::AddWire(mut points) => {
                 simplify(&mut points);
@@ -954,6 +1023,13 @@ impl Schematic {
             Command::SetPartCode { part, code } => {
                 if let Some(p) = self.part_mut(part) {
                     p.code = code;
+                }
+            }
+            Command::SetSourcing(list) => {
+                for (part, sourcing) in list {
+                    if let Some(p) = self.part_mut(part) {
+                        p.sourcing = sourcing;
+                    }
                 }
             }
             Command::SetPartDef { part, def, symbol } => {
@@ -1258,6 +1334,7 @@ pub fn new_part(def: &str, symbol: &str, refdes: String, pos: P2) -> Part {
         states: BTreeMap::new(),
         part_number: String::new(),
         code: String::new(),
+        sourcing: Sourcing::default(),
     }
 }
 
@@ -1274,22 +1351,27 @@ mod tests {
         let mut h = History::default();
         h.apply(
             &mut d,
-            Command::AddPart(new_part("core.vdc", "vdc", "V1".into(), [0.0, 0.0])),
+            Command::AddPart(Box::new(new_part(
+                "core.vdc",
+                "vdc",
+                "V1".into(),
+                [0.0, 0.0],
+            ))),
         );
         let mut r1 = new_part("core.resistor", "resistor", "R1".into(), [80.0, -40.0]);
         r1.params.insert("R".into(), "3k".into());
-        h.apply(&mut d, Command::AddPart(r1));
+        h.apply(&mut d, Command::AddPart(Box::new(r1)));
         let mut r2 = new_part("core.resistor", "resistor", "R2".into(), [160.0, 0.0]);
         r2.rot = 1;
-        h.apply(&mut d, Command::AddPart(r2));
+        h.apply(&mut d, Command::AddPart(Box::new(r2)));
         h.apply(
             &mut d,
-            Command::AddPart(new_part(
+            Command::AddPart(Box::new(new_part(
                 "core.ground",
                 "ground",
                 "GND1".into(),
                 [0.0, 60.0],
-            )),
+            ))),
         );
         // V1+ (0,-40) to R1.A (40,-40); R1.B (120,-40) to R2 top (160,-40).
         h.apply(&mut d, Command::AddWire(vec![[0.0, -40.0], [40.0, -40.0]]));
@@ -1369,12 +1451,12 @@ mod tests {
         let mut h = History::default();
         let created = h.apply(
             &mut d,
-            Command::AddPart(new_part(
+            Command::AddPart(Box::new(new_part(
                 "core.resistor",
                 "resistor",
                 "R1".into(),
                 [0.0, 0.0],
-            )),
+            ))),
         );
         let snapshot = d.clone();
         h.apply(
@@ -1438,6 +1520,60 @@ mod tests {
     }
 
     #[test]
+    fn sourcing_round_trips_and_old_files_load_empty() {
+        let mut d = divider();
+        let r1 = d.parts.iter().find(|p| p.refdes == "R1").unwrap().id;
+        let mut s = Sourcing {
+            mpn: "RC0603FR-073KL".into(),
+            manufacturer: "YAGEO".into(),
+            preferred_vendor: "jlcpcb".into(),
+            vendors: Vec::new(),
+        };
+        s.upsert(VendorRef {
+            provider: "jlcpcb".into(),
+            vendor_pn: "C22978".into(),
+            url: "https://www.lcsc.com/product-detail/C22978.html".into(),
+            unit_price: Some(0.0011),
+            price_qty: Some(100),
+            currency: "USD".into(),
+            stock: Some(1_000_000),
+            fetched_at: 1_794_000_000,
+        });
+        s.upsert(VendorRef {
+            provider: "farnell".into(),
+            vendor_pn: "9330755".into(),
+            ..Default::default()
+        });
+        let mut h = History::default();
+        h.apply(&mut d, Command::SetSourcing(vec![(r1, s.clone())]));
+        let a = d.to_json();
+        assert!(a.contains("\"sourcing\"") && a.contains("\"format_version\": 2"));
+        let back = Schematic::from_json(&a).unwrap();
+        assert_eq!(back.part(r1).unwrap().sourcing, s);
+        assert_eq!(back.to_json(), a);
+        assert_eq!(
+            back.part(r1)
+                .unwrap()
+                .sourcing
+                .preferred()
+                .unwrap()
+                .vendor_pn,
+            "C22978"
+        );
+        // Undo clears it again.
+        h.undo(&mut d);
+        assert!(d.part(r1).unwrap().sourcing.is_empty());
+        // A version 1 file (no sourcing anywhere) loads with empty blocks.
+        let v1 = divider()
+            .to_json()
+            .replace("\"format_version\": 2", "\"format_version\": 1");
+        let old = Schematic::from_json(&v1).unwrap();
+        assert_eq!(old.format_version, FORMAT_VERSION);
+        assert!(old.parts.iter().all(|p| p.sourcing.is_empty()));
+        assert!(!old.to_json().contains("sourcing"));
+    }
+
+    #[test]
     fn window_and_crossing_selection() {
         let d = divider();
         // Left to right around R1 only.
@@ -1464,18 +1600,18 @@ mod tests {
     #[test]
     fn refdes_fills_gaps() {
         let mut d = Schematic::default();
-        d.apply(Command::AddPart(new_part(
+        d.apply(Command::AddPart(Box::new(new_part(
             "core.resistor",
             "resistor",
             "R1".into(),
             [0.0, 0.0],
-        )));
-        d.apply(Command::AddPart(new_part(
+        ))));
+        d.apply(Command::AddPart(Box::new(new_part(
             "core.resistor",
             "resistor",
             "R3".into(),
             [0.0, 0.0],
-        )));
+        ))));
         assert_eq!(d.next_refdes("R"), "R2");
     }
 }

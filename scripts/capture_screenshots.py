@@ -243,6 +243,20 @@ def main():
         s.shot("19-spice-import.png", wait=0.8)
         s.close()
 
+        # Online catalogs (needs network): JLCPCB enabled in an isolated config.
+        cfg = home / ".config" / "electrocraft"
+        cfg.mkdir(parents=True, exist_ok=True)
+        (cfg / "settings.json").write_text(json.dumps({"catalogs": {"master": True, "enabled": ["jlcpcb"]}}))
+        s = run("--sample", "divider", commands=[{"id": "parts.search", "args": {"query": "10k 0603", "provider": "jlcpcb"}}])
+        s.x("mousemove", 380, 218, "click", 1)
+        s.shot("34-parts-panel.png", wait=4.0)
+        s.x("mousemove", 972, 541, "click", 1)
+        s.x("mousemove", 1183, 38, "click", 1)
+        s.x("mousemove", 1000, 860)
+        s.shot("35-inspector-sourcing.png", wait=1.0)
+        s.close()
+        (cfg / "settings.json").unlink()
+
         datasheet = str(Path(args.binary).with_name("electrocraft-datasheet"))
         if Path(datasheet).exists():
             s = Session(datasheet, args.display, home, ("--example", "npn"))

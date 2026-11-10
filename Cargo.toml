@@ -5,6 +5,7 @@ members = [
     "crates/ecs-model",
     "crates/ecs-sim",
     "crates/ecs-mcu",
+    "crates/ecs-catalog",
     "crates/ecs-lib",
     "crates/ecs-script",
     "crates/ecs-spice",
@@ -31,6 +32,7 @@ ecs-model = { path = "crates/ecs-model" }
 ecs-sim = { path = "crates/ecs-sim" }
 ecs-lib = { path = "crates/ecs-lib" }
 ecs-mcu = { path = "crates/ecs-mcu" }
+ecs-catalog = { path = "crates/ecs-catalog" }
 ecs-script = { path = "crates/ecs-script" }
 ecs-spice = { path = "crates/ecs-spice" }
 ecs-schematic = { path = "crates/ecs-schematic" }

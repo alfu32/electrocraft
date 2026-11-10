@@ -188,6 +188,46 @@ pub fn catalog() -> Vec<Info> {
             "Toggle a panel",
             json!({"panel": "components | inspector | scopes"}),
         ),
+        info(
+            "parts.open",
+            "Show or hide the Parts panel (online catalogs)",
+            none.clone(),
+        ),
+        info(
+            "parts.search",
+            "Search the enabled online catalogs (Parts panel)",
+            json!({"query": "string", "provider": "optional: jlcpcb | digikey | mouser | tme | farnell (default all enabled)"}),
+        ),
+        info(
+            "sourcing.set",
+            "Set sourcing fields of parts",
+            json!({"refdes": "designators, comma-separated", "mpn": "optional", "manufacturer": "optional", "preferred_vendor": "optional: jlcpcb | digikey | mouser | tme | farnell | empty"}),
+        ),
+        info(
+            "sourcing.find_all",
+            "Look parts up at every enabled vendor by manufacturer part number",
+            json!({"refdes": "optional designators, comma-separated (default: selected parts without vendors)"}),
+        ),
+        info(
+            "sourcing.refresh",
+            "Refresh a part's vendor entries",
+            json!({"refdes": "string"}),
+        ),
+        info(
+            "sourcing.clear",
+            "Clear a part's sourcing",
+            json!({"refdes": "string"}),
+        ),
+        info(
+            "bom.export",
+            "Export the bill of materials (dialog)",
+            none.clone(),
+        ),
+        info(
+            "bom.export_path",
+            "Export the bill of materials as CSV, plus one file per preferred vendor",
+            json!({"path": "string"}),
+        ),
         info("app.home", "Start screen", none.clone()),
         info("app.settings", "Settings", none.clone()),
         info(
@@ -339,6 +379,27 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             Some("inspector") => "inspector",
             _ => "scopes",
         }),
+        "parts.open" => Cmd::PartsPanel,
+        "parts.search" => Cmd::PartsSearch {
+            query: s(args, "query")?,
+            provider: args["provider"]
+                .as_str()
+                .filter(|p| !p.is_empty())
+                .map(str::to_string),
+        },
+        "sourcing.set" => Cmd::SetSourcing {
+            refdes: s(args, "refdes")?,
+            mpn: args["mpn"].as_str().map(str::to_string),
+            manufacturer: args["manufacturer"].as_str().map(str::to_string),
+            preferred_vendor: args["preferred_vendor"].as_str().map(str::to_string),
+        },
+        "sourcing.find_all" => {
+            Cmd::FindAtVendors(args["refdes"].as_str().unwrap_or("").to_string())
+        }
+        "sourcing.refresh" => Cmd::RefreshSourcing(s(args, "refdes")?),
+        "sourcing.clear" => Cmd::ClearSourcing(s(args, "refdes")?),
+        "bom.export" => Cmd::ExportBom,
+        "bom.export_path" => Cmd::ExportBomPath(s(args, "path")?.into()),
         "app.home" => Cmd::Home,
         "app.settings" => Cmd::Settings,
         "view.dot_speed" => Cmd::DotSpeed(n(args, "value")?),
@@ -371,7 +432,7 @@ mod tests {
         let mut ids = std::collections::BTreeSet::new();
         for i in catalog() {
             assert!(ids.insert(i.id), "duplicate id {}", i.id);
-            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0, "number": "2N2222A", "code": "nop"});
+            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0, "number": "2N2222A", "code": "nop", "query": "10k"});
             let args = match i.id {
                 "sim.control" => json!({"refdes": "S1", "state": "closed", "value": 1.0}),
                 "view.dot_speed" => json!({"value": 0.5}),

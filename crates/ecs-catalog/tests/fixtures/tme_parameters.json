@@ -1,0 +1,6 @@
+{"status":"OK","data":{"elements":[{"symbol":"1N4733A-DIO","parameters":{"elements":[
+  {"name":"Type of diode","values":[{"value":"Zener"}]},
+  {"name":"Zener voltage","values":[{"value":"5.1V"}]},
+  {"name":"Power","values":[{"value":"1.3W"}]},
+  {"name":"Case","values":[{"value":"DO41"}]}
+]}}]}}

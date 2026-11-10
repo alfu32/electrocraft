@@ -1,0 +1,5 @@
+{"keywordSearchReturn":{"numberOfResults":1,"products":[
+  {"sku":"1652438","displayName":"NXP - BC547B,112 - Bipolar (BJT) Single Transistor, NPN, 45 V, 100 mA, 500 mW, TO-92, Through Hole","productStatus":"STOCKED","rohsStatusCode":"YES","packSize":1,"unitOfMeasure":"EACH","id":"pf_UK1_1652438_0","prices":[{"to":9,"from":1,"cost":0.172},{"to":99,"from":10,"cost":0.0861}],"inv":0,"vendorId":"","vendorName":"NXP","brandName":"NEXPERIA","translatedManufacturerPartNumber":"BC547B,112","translatedMinimumOrderQuality":1,"stock":{"level":3561,"leastLeadTime":0,"status":1,"shipsFromMultipleWarehouses":false},
+   "attributes":[{"attributeLabel":" Transistor Polarity","attributeValue":"NPN"},{"attributeLabel":" Collector Emitter Voltage V(br)ceo","attributeUnit":"V","attributeValue":"45"},{"attributeLabel":" Transistor Case Style","attributeValue":"TO-92"}],
+   "datasheets":[{"type":"T","description":"Technical Data Sheet","url":"http://www.farnell.com/datasheets/2862826.pdf"}]}
+]}}

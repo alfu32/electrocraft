@@ -15,8 +15,11 @@ lane per channel, docked or floating), your own components with a drawn symbol
 implemented by a nested schematic or JavaScript (edit any part's component, or
 enter its schematic; equations as plain JavaScript functions or `e` templates,
 in an editor with highlighting and suggestions), DC sweep, transient, AC (Bode) and parameter-step
-analyses with plots, SPICE model and subcircuit import, and a companion tool
-that fits models to datasheet curves.
+analyses with plots, SPICE model and subcircuit import, online part catalogs
+(JLCPCB/LCSC, DigiKey, Mouser, TME, Farnell: search, place real parts with
+their values, keep a preferred vendor per part and export a bill of materials;
+off until you enable a provider in Settings, keys kept in the system keychain),
+and a companion tool that fits models to datasheet curves.
 
 Electrocraft is a native Rust app: an egui shell in SolidCraft's visual
 language, a Raylib off-screen canvas operated like Wirecraft's, and a modified

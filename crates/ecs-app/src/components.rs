@@ -543,7 +543,7 @@ mod tests {
         for (k, v) in params {
             p.params.insert(k.to_string(), v.to_string());
         }
-        match doc.apply(Command::AddPart(p))[0] {
+        match doc.apply(Command::AddPart(Box::new(p)))[0] {
             Item::Part(id) => id,
             _ => unreachable!(),
         }

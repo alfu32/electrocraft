@@ -15,6 +15,7 @@ mod components;
 mod icons;
 mod import_ui;
 mod packages;
+mod parts_ui;
 mod program_ui;
 mod samples;
 mod scene;
@@ -50,6 +51,7 @@ impl eframe::App for Shell {
             ctx.request_repaint_after(std::time::Duration::from_millis(100));
         }
         app.poll_sim();
+        app.poll_catalogs();
         app.sync_sim(false);
         app.shortcuts(&ctx);
         if app.status != self.status_seen {
@@ -82,6 +84,7 @@ impl eframe::App for Shell {
             app.breadcrumb(&ctx);
             app.component_editor(&ctx);
             app.program_window(&ctx);
+            app.parts_window(&ctx);
             if app.show_inspector {
                 app.inspector(&ctx);
             }
@@ -89,6 +92,7 @@ impl eframe::App for Shell {
         }
         cmds.extend(app.palette(&ctx));
         app.dialogs(&ctx);
+        app.catalog_confirm(&ctx);
         if let Some(which) = app.analysis.dialog_ui(&ctx, &app.built) {
             cmds.push(Cmd::RunAnalysis(which));
         }

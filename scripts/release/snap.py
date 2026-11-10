@@ -76,7 +76,9 @@ apps:
   electrocraft:
     command: bin/electrocraft
     common-id: io.github.alfu32.electrocraft
-    plugs: [home, removable-media, desktop, desktop-legacy, wayland, x11, opengl, gpu-2404]
+    # network and password-manager-service: online part catalogs (off until
+    # the user enables them) and their keys in the system keychain.
+    plugs: [home, removable-media, desktop, desktop-legacy, wayland, x11, opengl, gpu-2404, network, password-manager-service]
   cli:
     command: bin/electrocraft-cli
     plugs: [home, removable-media]

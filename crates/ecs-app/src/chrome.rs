@@ -419,6 +419,8 @@ impl App {
             for (label, c2) in [
                 ("Import SPICE Models...", Cmd::ImportSpice),
                 ("Export SPICE Netlist...", Cmd::ExportSpice),
+                ("Export Bill of Materials...", Cmd::ExportBom),
+                ("Parts Catalogs...", Cmd::PartsPanel),
                 ("User Components Folder...", Cmd::OpenComponentsFolder),
             ] {
                 if menu_item(ui, label, "") {
@@ -1645,6 +1647,7 @@ impl App {
                     if self.selection.len() > 1 {
                         ui.label(RichText::new(format!("{} items selected", self.selection.len())).font(theme::bold(14.0)));
                         ui.label(RichText::new("R rotate · M mirror · Ctrl+D duplicate · Del delete").color(c::TEXT_DIM).small());
+                        self.sourcing_multi(ui);
                         return;
                     }
                     let item = *self.selection.iter().next().unwrap();
@@ -1654,6 +1657,7 @@ impl App {
                             ui.set_max_height(max_h);
                             egui::ScrollArea::vertical().max_height(max_h).auto_shrink([false, true]).show(ui, |ui| {
                                 self.part_inspector(ui, id);
+                                self.sourcing_section(ui, id);
                                 self.scope_section(ui, item);
                             });
                         }
@@ -2326,6 +2330,12 @@ impl App {
                     }
                     ui.add_space(4.0);
                     ui.label(RichText::new("Saved for next time.").color(c::TEXT_FAINT).small());
+                    ui.add_space(6.0);
+                    egui::CollapsingHeader::new(RichText::new("Online part catalogs").font(theme::bold(13.0)))
+                        .default_open(self.settings.catalogs.master)
+                        .show(ui, |ui| {
+                            egui::ScrollArea::vertical().max_height(440.0).show(ui, |ui| self.catalog_settings(ui));
+                        });
                 }
                 "about" => {
                     ui.set_width(380.0);

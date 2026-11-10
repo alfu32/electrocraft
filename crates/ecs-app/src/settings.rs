@@ -17,6 +17,9 @@ pub struct Settings {
     pub electron_flow: bool,
     /// Resistors as IEC rectangles instead of ANSI/IEEE zigzags.
     pub iec_resistors: bool,
+    /// Online part catalogs: what the user approved (off by default).
+    /// Credentials are not here: they live in the system keychain.
+    pub catalogs: ecs_catalog::Consent,
 }
 
 impl Default for Settings {
@@ -28,6 +31,7 @@ impl Default for Settings {
             current_dots: true,
             electron_flow: false,
             iec_resistors: false,
+            catalogs: ecs_catalog::Consent::default(),
         }
     }
 }

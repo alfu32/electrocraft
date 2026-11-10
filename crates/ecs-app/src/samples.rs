@@ -83,7 +83,7 @@ impl B<'_> {
         for (k, v) in params {
             p.params.insert(k.to_string(), v.to_string());
         }
-        match self.doc.apply(Command::AddPart(p))[0] {
+        match self.doc.apply(Command::AddPart(Box::new(p)))[0] {
             ecs_schematic::Item::Part(id) => id,
             _ => unreachable!(),
         }
@@ -103,7 +103,7 @@ impl B<'_> {
         for (k, v) in params {
             p.params.insert(k.to_string(), v.to_string());
         }
-        match self.doc.apply(Command::AddPart(p))[0] {
+        match self.doc.apply(Command::AddPart(Box::new(p)))[0] {
             ecs_schematic::Item::Part(id) => id,
             _ => unreachable!(),
         }

@@ -1,0 +1,31 @@
+{
+  "Errors": [],
+  "SearchResults": {
+    "NumberOfResult": 1,
+    "Parts": [
+      {
+        "Availability": "1240 In Stock",
+        "AvailabilityInStock": "1240",
+        "Category": "Aluminum Electrolytic Capacitors - Radial Leaded",
+        "DataSheetUrl": "https://www.mouser.com/datasheet/2/293/e_ucy-1219543.pdf",
+        "Description": "Aluminum Electrolytic Capacitors - Radial Leaded 25volts 100uF 20% 5x11",
+        "LeadTime": "18 Weeks",
+        "LifecycleStatus": null,
+        "Manufacturer": "Nichicon",
+        "ManufacturerPartNumber": "UVR1E101MED",
+        "MouserPartNumber": "647-UVR1E101MED",
+        "PriceBreaks": [
+          {"Quantity": 1, "Price": "$0.21", "Currency": "USD"},
+          {"Quantity": 10, "Price": "$0.137", "Currency": "USD"},
+          {"Quantity": 100, "Price": "$0.074", "Currency": "USD"}
+        ],
+        "ProductAttributes": [
+          {"AttributeName": "Packaging", "AttributeValue": "Bulk"}
+        ],
+        "ProductDetailUrl": "https://www.mouser.com/ProductDetail/Nichicon/UVR1E101MED?qs=example",
+        "ROHSStatus": "RoHS Compliant",
+        "IsDiscontinued": "false"
+      }
+    ]
+  }
+}

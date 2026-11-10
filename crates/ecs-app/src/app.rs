@@ -180,6 +180,31 @@ pub enum Cmd {
     DeletePart(String),
     /// Start the datasheet fitting tool (a separate program, spec 8.2).
     DatasheetTool,
+    /// Show or hide the Parts panel (online catalogs).
+    PartsPanel,
+    /// Search the catalogs (opens the Parts panel); provider key or all enabled.
+    PartsSearch {
+        query: String,
+        provider: Option<String>,
+    },
+    /// Set sourcing fields of parts (comma-separated designators; None keeps a field).
+    SetSourcing {
+        refdes: String,
+        mpn: Option<String>,
+        manufacturer: Option<String>,
+        preferred_vendor: Option<String>,
+    },
+    /// Look parts up at every enabled vendor (the selection's parts without
+    /// vendor entries when empty).
+    FindAtVendors(String),
+    /// Refresh a part's vendor entries.
+    RefreshSourcing(String),
+    /// Clear a part's sourcing.
+    ClearSourcing(String),
+    /// Export the bill of materials (dialog).
+    ExportBom,
+    /// Export the bill of materials to a file (plus one per preferred vendor).
+    ExportBomPath(PathBuf),
 }
 
 /// A document open in a tab. The active tab's state lives in [`App`]'s own
@@ -309,6 +334,8 @@ pub struct App {
     pub import: crate::import_ui::ImportUi,
     pub user_lib: crate::packages::UserLibrary,
     pub package_problems: Vec<String>,
+    /// Online part catalogs (Parts panel, sourcing lookups).
+    pub parts: crate::parts_ui::PartsUi,
 }
 
 const MAX_SCOPE: usize = 60_000;
@@ -404,12 +431,14 @@ impl App {
             import: Default::default(),
             user_lib: Default::default(),
             package_problems: Vec::new(),
+            parts: Default::default(),
         };
         app.settings = crate::settings::Settings::load();
         app.grid = app.settings.grid;
         app.volt_colors = app.settings.volt_colors;
         app.current_dots = app.settings.current_dots;
         ecs_schematic::symbols::set_resistor_style(app.settings.iec_resistors);
+        app.parts.set_consent(&app.settings.catalogs);
         app.package_problems = crate::packages::load_packages(&mut app.cat);
         app.user_lib.poll(&mut app.cat);
         let cat = Catalog::builtin();
@@ -1199,6 +1228,106 @@ impl App {
             Cmd::Shortcuts => self.dialog = Some("shortcuts"),
             Cmd::About => self.dialog = Some("about"),
             Cmd::Settings => self.dialog = Some("settings"),
+            Cmd::PartsPanel => self.parts.open = !self.parts.open,
+            Cmd::PartsSearch { query, provider } => {
+                self.parts.open = true;
+                self.parts.text = query;
+                self.parts.provider = provider
+                    .as_deref()
+                    .and_then(ecs_catalog::ProviderId::from_key);
+                if let Some(msg) = self.parts.search(ctx) {
+                    self.status = msg;
+                }
+            }
+            Cmd::SetSourcing {
+                refdes,
+                mpn,
+                manufacturer,
+                preferred_vendor,
+            } => {
+                let mut changes = Vec::new();
+                for r in refdes.split(',').map(str::trim).filter(|r| !r.is_empty()) {
+                    match self.doc.parts.iter().find(|p| p.refdes == r) {
+                        Some(p) => {
+                            let mut s = p.sourcing.clone();
+                            if let Some(m) = &mpn {
+                                s.mpn = m.trim().to_string();
+                            }
+                            if let Some(m) = &manufacturer {
+                                s.manufacturer = m.trim().to_string();
+                            }
+                            if let Some(v) = &preferred_vendor {
+                                s.preferred_vendor = v.trim().to_string();
+                            }
+                            changes.push((p.id, s));
+                        }
+                        None => self.status = format!("No part {r}"),
+                    }
+                }
+                if !changes.is_empty() {
+                    self.edit(Command::SetSourcing(changes));
+                }
+            }
+            Cmd::FindAtVendors(refdes) => {
+                let ids: Vec<Id> = if refdes.trim().is_empty() {
+                    self.selection
+                        .iter()
+                        .filter_map(|i| match i {
+                            Item::Part(id) => Some(*id),
+                            _ => None,
+                        })
+                        .filter(|id| {
+                            self.doc
+                                .part(*id)
+                                .is_some_and(|p| p.sourcing.vendors.is_empty())
+                        })
+                        .collect()
+                } else {
+                    refdes
+                        .split(',')
+                        .filter_map(|r| {
+                            self.doc
+                                .parts
+                                .iter()
+                                .find(|p| p.refdes == r.trim())
+                                .map(|p| p.id)
+                        })
+                        .collect()
+                };
+                self.find_at_vendors(ctx, ids);
+            }
+            Cmd::RefreshSourcing(r) => {
+                match self.doc.parts.iter().find(|p| p.refdes == r).map(|p| p.id) {
+                    Some(id) => self.refresh_sourcing(ctx, id),
+                    None => self.status = format!("No part {r}"),
+                }
+            }
+            Cmd::ClearSourcing(r) => {
+                match self.doc.parts.iter().find(|p| p.refdes == r).map(|p| p.id) {
+                    Some(id) => {
+                        self.edit(Command::SetSourcing(vec![(
+                            id,
+                            ecs_schematic::Sourcing::default(),
+                        )]));
+                    }
+                    None => self.status = format!("No part {r}"),
+                }
+            }
+            Cmd::ExportBom => {
+                if let Some(p) = rfd::FileDialog::new()
+                    .add_filter("CSV", &["csv"])
+                    .set_file_name(format!("{}-bom.csv", self.title()))
+                    .save_file()
+                {
+                    self.run(Cmd::ExportBomPath(p), ctx);
+                }
+            }
+            Cmd::ExportBomPath(p) => {
+                self.status = match self.export_bom(&p) {
+                    Ok(files) => format!("Exported {} file(s): {}", files.len(), p.display()),
+                    Err(e) => format!("Could not export: {e}"),
+                };
+            }
             Cmd::EditProgram(r) => {
                 match self.doc.parts.iter().find(|p| p.refdes == r).map(|p| p.id) {
                     Some(id) => self.open_program(id),
@@ -1297,7 +1426,7 @@ impl App {
                 Some(d) => {
                     let mut p = self.cat.new_part(&self.doc, &d, at);
                     p.rot = rot % 4;
-                    let created = self.edit(Command::AddPart(p));
+                    let created = self.edit(Command::AddPart(Box::new(p)));
                     self.selection = created.into_iter().collect();
                 }
                 None => self.status = format!("Unknown component {def}"),
@@ -2028,7 +2157,7 @@ impl App {
                     let mut p = self.cat.new_part(&self.doc, &d, snapped);
                     p.rot = rot;
                     p.mirror = mirror;
-                    let created = self.edit(Command::AddPart(p));
+                    let created = self.edit(Command::AddPart(Box::new(p)));
                     self.selection = created.into_iter().collect();
                 }
                 let _ = ctx;
@@ -2315,7 +2444,7 @@ mod live_tests {
         // A part that is not wired in leaves the netlist as it was.
         let def = app.cat.def("core.resistor").unwrap().clone();
         let p = app.cat.new_part(&app.doc, &def, [2000.0, 2000.0]);
-        app.edit(Command::AddPart(p));
+        app.edit(Command::AddPart(Box::new(p)));
         app.live = Live::default();
         assert!(
             wait_live(&mut app),

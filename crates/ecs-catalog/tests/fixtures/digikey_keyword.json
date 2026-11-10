@@ -1,0 +1,30 @@
+{
+  "Products": [
+    {
+      "Description": {"ProductDescription": "RES 10K OHM 1% 1/10W 0603", "DetailedDescription": "10 kOhms ±1% 0.1W, 1/10W Chip Resistor 0603 (1608 Metric) Moisture Resistant Thick Film"},
+      "Manufacturer": {"Id": 13, "Name": "YAGEO"},
+      "ManufacturerProductNumber": "RC0603FR-0710KL",
+      "UnitPrice": 0.1,
+      "ProductUrl": "https://www.digikey.com/en/products/detail/yageo/RC0603FR-0710KL/726880",
+      "DatasheetUrl": "https://www.yageo.com/upload/media/product/productsearch/datasheet/rchip/PYu-RC_Group_51_RoHS_L_12.pdf",
+      "QuantityAvailable": 9561842,
+      "ProductStatus": {"Id": 0, "Status": "Active"},
+      "ManufacturerLeadWeeks": "16",
+      "Category": {"CategoryId": 52, "Name": "Chip Resistor - Surface Mount"},
+      "Classifications": {"RohsStatus": "ROHS3 Compliant"},
+      "Parameters": [
+        {"ParameterId": 2085, "ParameterText": "Resistance", "ValueText": "10 kOhms"},
+        {"ParameterId": 3, "ParameterText": "Tolerance", "ValueText": "±1%"},
+        {"ParameterId": 2, "ParameterText": "Power (Watts)", "ValueText": "0.1W, 1/10W"},
+        {"ParameterId": 16, "ParameterText": "Package / Case", "ValueText": "0603 (1608 Metric)"}
+      ],
+      "ProductVariations": [
+        {"DigiKeyProductNumber": "311-10.0KHRCT-ND", "PackageType": {"Id": 2, "Name": "Cut Tape (CT)"},
+         "StandardPricing": [{"BreakQuantity": 1, "UnitPrice": 0.1, "TotalPrice": 0.1}, {"BreakQuantity": 10, "UnitPrice": 0.016, "TotalPrice": 0.16}, {"BreakQuantity": 100, "UnitPrice": 0.0064, "TotalPrice": 0.64}]}
+      ]
+    }
+  ],
+  "ProductsCount": 1,
+  "ExactMatches": [],
+  "FilterOptions": {}
+}
