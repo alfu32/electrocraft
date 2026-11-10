@@ -1,0 +1,23 @@
+[package]
+name = "datasheet-tool"
+description = "Companion app that fits component models to datasheet data (phase P8)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "electrocraft-datasheet"
+path = "src/main.rs"
+
+[dependencies]
+ecs-model.workspace = true
+ecs-sim.workspace = true
+ecs-lib.workspace = true
+ecs-units.workspace = true
+ecs-script.workspace = true
+eframe.workspace = true
+egui.workspace = true
+egui_plot.workspace = true
+image.workspace = true
+rfd.workspace = true

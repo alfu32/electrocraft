@@ -1,3 +1,9 @@
 .kode*
 packaging/msstore
 packaging/snapstore
+/target
+/dist
+/.store
+*.AppImage
+*.zsync
+__pycache__/

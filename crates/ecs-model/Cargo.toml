@@ -1,0 +1,11 @@
+[package]
+name = "ecs-model"
+description = "Component definition contract shared by built-ins, scripts and SPICE imports"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ecs-expr.workspace = true
+ecs-units.workspace = true

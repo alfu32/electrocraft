@@ -1,10 +1,14 @@
-# Circuit Simulator — Specification & Plan
+# Electrocraft — Specification & Plan
 
-Nov 9, 2026 · @Asdfghjkar
+Nov 9, 2026 · @Asdfghjkar · revised Nov 9, 2026 for look and feel, canvas operation, packaging and implementation status · revised Nov 10, 2026 for phases P5 to P8 and the command registry
+
+![Electrocraft running a transistor multivibrator live](docs/screenshots/02-workspace-astable-live.png)
+
+*Electrocraft 0.1.0: an astable multivibrator running live, with scope channels on Q2's collector and base (`Q2.C.V`, `Q2.B.V`). Wires are coloured by voltage, yellow dots show current, the LEDs glow in proportion to their current. Screenshots in this document are captured from the real application by `scripts/capture_screenshots.py`.*
 
 ## 1. Overview & goals
 
-A native Rust desktop app for drawing electronic schematics and simulating them live, in the spirit of iCircuit: you place parts, wire them, and see voltages, currents and waveforms update while you flip switches and turn knobs. On demand, the same circuit can be run through a slower, SPICE-grade analysis for accurate results.
+Electrocraft is a native Rust desktop app for drawing electronic schematics and simulating them live, in the spirit of iCircuit: you place parts, wire them, and see voltages, currents and waveforms update while you flip switches and turn knobs. On demand, the same circuit can be run through a slower, SPICE-grade analysis for accurate results.
 
 **Goals**
 
@@ -28,20 +32,49 @@ The choices below are settled. The coding agent should treat them as constraints
 | # | Decision | Choice | Reason |
 | --- | --- | --- | --- |
 | D1 | Language | Rust (stable, 2021 edition or later) | Owner's choice. Performance and safety for the solver. |
-| D2 | UI shell | egui (via eframe) for all panels, menus, dialogs, inspectors | Proven in Meshcraft. |
-| D3 | Schematic canvas rendering | Raylib 6 rendering off-screen into a render texture. The pixels are copied each frame into an egui texture and shown as an image. | Same pattern as Meshcraft. Raylib has been artifact-free on the owner's machine. |
+| D2 | UI shell | egui (via eframe) for all panels, menus, dialogs, inspectors | SolidCraft, the look-and-feel reference (D10), is an egui application. Meshcraft has since moved its native shell to GPUI; Electrocraft stays on egui. |
+| D3 | Schematic canvas rendering | Raylib 6 on its own thread with a hidden window, rendering off-screen into a render texture. The pixels are read back and uploaded into an egui texture shown as an image. | Same pattern as Meshcraft's `RaylibWorker`. Raylib has been artifact-free on the owner's machine. |
 | D4 | GPU API | No WGPU anywhere, including egui's backend: use eframe's glow (OpenGL) backend | WGPU apps showed rendering artifacts on the owner's machine. |
 | D5 | Simulation method | Modified Nodal Analysis (MNA), time-stepped, with companion models and Newton-Raphson. Digital parts run on an event layer coupled to the analog solver. | Industry standard (SPICE, iCircuit, Falstad). Handles both live and accurate modes. |
 | D6 | Two simulation modes | **Interactive** (continuous, real-time, relaxed tolerances) and **Analysis** (commands: DC OP, transient, AC, sweeps; SPICE tolerances) | Owner wants both. Both use the same engine and component models with different settings. |
 | D7 | Component contract | Components declare physics (pins, parameters, branch currents and charges as expressions of voltages). The engine derives stamps, derivatives and integration. | Users never touch solver internals. The solver can evolve without rewriting components. |
 | D8 | User component language | JavaScript (ES2020) on the QuickJS engine, via the `rquickjs` crate | Owner's choice. Widely known, so users can write components without learning a new language. Scripts only build expressions; the hot loop runs native code, so script speed does not limit simulation speed. |
 | D9 | Model sources | SPICE `.model` / `.subckt` import in the main app; datasheet-to-model conversion in a separate companion tool | Manufacturers publish SPICE models. Datasheets give parameters for known model families, not programs. |
+| D10 | Look and feel | SolidCraft's visual language: custom title bar with document tabs, a ribbon with a workspace card, grouped icon buttons and command search, floating rounded panels over the canvas, a floating navigation toolbar, a transport bar along the bottom, and a blue Start screen (section 9.1) | Owner's choice. The Craft family of apps should feel like one product. |
+| D11 | Canvas operation | Wirecraft's conventions: zoom at the pointer, middle-drag pan, left-to-right window and right-to-left crossing selection, Shift adds, Ctrl removes, a 3 px drag threshold, a placement shadow that follows the pointer, a right-click context menu with the part palette, Escape cancels (section 9.3) | Owner's choice. Same muscle memory across Wirecraft and Electrocraft. |
+| D12 | Packaging | Meshcraft's release pipeline and artifact matrix, with AppImages named and described the way AppGlider prefers (section 13) | Owner's choice. AppGlider is how the owner installs and updates the Craft apps. |
+| D13 | Name | Electrocraft. Crate prefix `ecs`, schematic extension `.ecs`, binary and window app id `electrocraft`, AppStream id `io.github.alfu32.electrocraft` | Resolves Q1. |
+| D14 | Automation | Every user-facing action is a command with a stable string id and JSON arguments (`commands.rs`). Menus, ribbon, palette, `--commands` scripts and the coming MCP server all go through it (section 9.6) | The owner will publish an MCP server; Meshcraft uses the same single-registry pattern. |
+| D15 | Scope | The oscilloscope is not a component. Its channels are formulas over codes: every net has a code (its label, or a stable `n<wire id>`), every part terminal has a voltage and a current (`R1.A.V`, `R1.A.I`, two-terminal parts also `R1.V`, `R1.I`), and part probes add their own (`D1.P`) (section 9.5) | Owner's choice: measuring must not change the schematic, and formulas cover power, differences and ratios. |
+| D16 | Components in a schematic | Any component, built-in or custom, has a symbol with named ports and an implementation. A schematic can carry its own component prototypes, implemented by a nested or external schematic, or by inline or external JavaScript; any instance opens its prototype for editing (sections 5.5, 9.7) | Owner's choice: hierarchical design without leaving the editor. |
 
 ## 3. Architecture
 
 The simulator is a headless library with no UI dependency. The app talks to it only through messages. That keeps the engine testable from the command line and lets the datasheet tool reuse it.
 
-&#91;embedded content: runtime architecture · UI thread, simulation thread, analysis workers\]
+```mermaid
+flowchart LR
+  subgraph UI[UI thread · egui/eframe glow]
+    shell[Shell: title bar, ribbon, panels]
+    doc[Schematic document + undo]
+    scene[Display list builder]
+  end
+  subgraph RL[Raylib thread · hidden window]
+    rt[RenderTexture 2x supersampled] --> rb[Read-back RGBA]
+  end
+  subgraph SIM[Simulation thread]
+    eng[Interactive engine · MNA + Newton]
+  end
+  subgraph AW[Analysis workers · phase P7]
+    job[Analysis job]
+  end
+  doc -- Rebuild / SetParam / SetState --> eng
+  eng -- triple-buffered snapshot --> shell
+  eng -- SPSC scope samples --> shell
+  scene -- DisplayList --> rt
+  rb -- Frame --> shell
+  doc -. compiled circuit .-> job
+```
 
 The UI thread sends edits and parameter changes to the simulation thread and reads back state snapshots and scope samples. Analysis commands run on worker threads, each with its own copy of the compiled circuit.
 
@@ -56,17 +89,18 @@ The UI thread sends edits and parameter changes to the simulation thread and rea
 | `ecs-lib` | lib | Built-in components, written in Rust against the same contract | ecs-model |
 | `ecs-script` | lib | JavaScript host (QuickJS via `rquickjs`): loads `.js` component files into `ecs-model` definitions and parses `e` expression templates through `ecs-expr` | ecs-model |
 | `ecs-spice` | lib | SPICE netlist, `.model` and `.subckt` parser and mapper | ecs-model, ecs-lib |
-| `ecs-schematic` | lib | Schematic document: symbols, placement, wires, junctions, labels, undo/redo, netlist extraction | ecs-model |
-| `ecs-render` | lib | Raylib off-screen schematic renderer, hit testing, live overlays | ecs-schematic |
+| `ecs-schematic` | lib | Schematic document: symbols, placement, wires, junctions, labels, hit testing, window selection, undo/redo, netlist extraction | ecs-units |
+| `ecs-render` | lib | Raylib off-screen renderer of display lists (lines, polygons, circles, glows, text) on its own thread, with read-back | none (raylib) |
 | `ecs-app` | bin | eframe application: shell, editor tools, scopes, plots, settings | all of the above |
 | `ecs-cli` | bin | Headless runner: netlist in, CSV or JSON results out. Used for tests and benchmarks. | ecs-sim, ecs-lib, ecs-script, ecs-spice |
 | `datasheet-tool` | bin | Companion app, later phase (section 8) | ecs-model, ecs-sim |
 
-`ecs` is a placeholder prefix until the product has a name.
+`ecs` stands for Electrocraft Simulator (D13). Hit testing lives in `ecs-schematic`, not `ecs-render`, so it is tested headless; the renderer only draws display lists the app builds.
 
 **Threads and messages**
 
-- **UI thread** owns the egui context, the Raylib context and the schematic document. The Raylib integration follows Meshcraft: render the schematic into a `RenderTexture2D`, read the pixels back and update an egui texture each frame the canvas is dirty.
+- **UI thread** owns the egui context and the schematic document. It builds a display list for the canvas each frame and submits it only when it differs from the last one.
+- **Raylib thread** owns the Raylib context (a hidden 320×240 window) as in Meshcraft's `RaylibWorker`. It draws the newest display list into a render texture at twice the canvas size, downsamples on the GPU with bilinear filtering (2×2 supersampling, so wires and symbols are anti-aliased), reads the pixels back and hands the frame to the UI, which updates an egui texture. If Raylib cannot start, the same display list is painted with egui (the software canvas, also forced with `--software-canvas`).
 - **Simulation thread** owns the compiled circuit and the interactive engine. It receives commands over a `crossbeam-channel`: `Rebuild(netlist)`, `SetParam`, `SetControl` (switch, potentiometer), `Run`, `Pause`, `SetSpeed`, `Reset`.
 - **State out:** after each frame's worth of steps, the engine publishes a snapshot (node voltages, branch currents, digital states) through a lock-free triple buffer. The UI reads the newest one; old ones are dropped.
 - **Samples out:** probed signals stream through a single-producer, single-consumer ring buffer per scope so no sample is lost between frames.
@@ -105,7 +139,7 @@ The integrator keeps the history of q per component. A component never sees the 
 
 ### 4.3 Nonlinear solving
 
-- **Convergence test:** each node voltage must satisfy |Δv| < reltol·|v| + vntol, and each branch current |Δi| < reltol·|i| + abstol. Defaults: reltol 1e-3, vntol 1 µV, abstol 1 pA.
+- **Convergence test:** each node voltage must satisfy |Δv| < reltol·|v| + vntol, and each branch current |Δi| < reltol·|i| + abstol. Defaults: reltol 1e-3, vntol 1 µV, abstol 1 pA. As in SPICE, a **residual test** also accepts an iterate whose KCL error at every node is within reltol of the sum of the device currents meeting there (scaled from the step's converged starting point, so an overshooting iterate cannot loosen its own test). Without it, regenerative edges (multivibrators, latches) stall: the Jacobian is nearly singular along a common-mode direction that carries no current.
 - **Limiting:** components can declare limiting on a controlling voltage (the SPICE `pnjlim` style for junctions, `fetlim` for MOS gates). The engine applies it between iterations to stop exponentials from overflowing.
 - **Gmin:** a tiny conductance (default 1e-12 S) across every nonlinear junction and from every node to ground, so no node floats.
 - **DC operating point fallbacks:** plain Newton first; then gmin stepping (start at 1e-3 S, shrink to the default); then source stepping (ramp all independent sources from 0 to 100%). Report which method succeeded.
@@ -113,8 +147,8 @@ The integrator keeps the history of q per component. A component never sees the 
 ### 4.4 Linear solver
 
 - The matrix sparsity pattern depends only on topology. The compiler computes it, chooses a fill-reducing ordering and does the symbolic factorization once per topology. Each Newton iteration only refactors numerically.
-- Use `faer` for sparse LU. Hide it behind a `LinearSolver` trait so a dense LU (faster for small circuits, under about 50 unknowns) can be swapped in. The agent benchmarks both and picks the switch-over size.
-- **Linear fast path:** if a circuit has no nonlinear components and the step size is fixed, the matrix never changes. Factor once and reuse the factors for every step until a switch or parameter change. Most beginner circuits hit this path, so live mode is very fast for them.
+- Use `faer` for sparse LU. Hide it behind a `LinearSolver` trait so a dense LU (faster for small circuits, under about 50 unknowns) can be swapped in. The agent benchmarks both and picks the switch-over size. *Status:* the trait and the dense LU (partial pivoting) exist; `faer` and the benchmark are still to do.
+- **Linear fast path:** if a circuit has no nonlinear components and the step size is fixed, the matrix never changes. Factor once and reuse the factors for every step until a switch or parameter change. Most beginner circuits hit this path, so live mode is very fast for them. *Implemented generically:* tapes report whether every output is affine in the unknowns; a linear circuit takes one Newton iteration per step, and the LU reuses its factors whenever the assembled matrix is bit-identical to the previous one (`rc_charge_and_factor_reuse` checks two factorizations for 2000 steps).
 - Analysis mode AC uses the same pattern with complex numbers (`faer` supports complex LU).
 
 ### 4.5 Interactive mode
@@ -122,8 +156,8 @@ The integrator keeps the history of q per component. A component never sees the 
 The goal is a responsive, believable picture, not the last digit of accuracy.
 
 - **Pacing:** the user sets a simulation speed (simulated time per real second) and a nominal time step. Each UI frame, the engine advances simulated time by speed × frame time, within a CPU budget (default 60% of a frame). If it cannot keep up, it slows down and the status bar shows the actual rate.
-- **Step control:** fixed nominal step, reduced automatically around breakpoints and when Newton fails (halve up to 8 times, then grow back). No truncation-error control.
-- **Failure is never fatal:** after the step floor is reached, the engine accepts the step, flags the circuit with a "convergence trouble" marker on the offending component, and keeps running.
+- **Step control:** fixed nominal step, reduced automatically around breakpoints and when Newton fails: halve down to h/2^20 (regenerative edges need steps short enough for junction charge to dominate), and double again after every two successes. No truncation-error control.
+- **Failure is never fatal:** after the step floor is reached, the engine accepts the last Newton iterate if it is finite and of the same order as the starting state (otherwise it keeps the previous state), flags the nonlinear components with a "convergence trouble" marker, and keeps running. Markers clear after 5000 clean steps.
 - **Live controls:** switches, potentiometers, and source values change between steps and insert a breakpoint.
 - **Reset:** recompute the DC operating point and restart time at zero.
 
@@ -144,6 +178,8 @@ Analysis commands are invoked from a menu or the command palette. Each runs on a
 
 AC analysis needs nothing extra from components: the small-signal model is the Jacobians ∂i/∂x and ∂q/∂x at the operating point, which autodiff already provides.
 
+*Implemented (`ecs-sim::analysis`):* operating point (also as a table result); DC sweep of any instance parameter (live parameters change in place with a warm start, others recompile per point); transient with error-controlled step choice: the step adapts so the difference between the solution and a linear predictor stays near reltol, landing on digital events, capped by the maximum step (steps are not rejected yet); AC small-signal on a log frequency sweep, excited by each source's `AC` parameter (the sine source defaults to 1 V), solved with a dense complex LU; parameter step running each point on its own thread; FFT (resampling to a power of two, Hann window, amplitude-correct). Results are named vectors with CSV export. Gear-2, user initial conditions, linear and per-octave sweeps, and two-source DC sweeps are still to do.
+
 ### 4.7 Digital event layer
 
 - Each digital pin belongs to a **logic family** (e.g. 5 V CMOS, 3.3 V CMOS, TTL) that defines input thresholds, output high and low voltages, output resistance, and rise and fall times.
@@ -152,17 +188,21 @@ AC analysis needs nothing extra from components: the small-signal model is the J
 - **Events:** a digital component reacts to input changes by scheduling output changes after its propagation delay on a time-ordered queue. The analog stepper always lands exactly on queued event times.
 - **Later optimization:** nets with only digital pins can be resolved purely in the event domain without analog nodes.
 
+*Implemented:* families `cmos5` (default), `cmos33`, `ttl`, and `rail:<P>:<N>` whose levels follow two pins (the 555's output). A component's `family` enum parameter selects it. The compiler synthesizes a Thevenin branch per digital output whose voltage ramps linearly over the rise time between levels held in live state slots, and an input resistance per digital input. Inputs use the family thresholds with hysteresis (a level in between keeps the previous level). Events live on a min-heap; the stepper shortens any step to land on the next event, applies due drives with a breakpoint, re-reads inputs and runs `on_inputs`, following zero-delay chains a bounded number of times. **Watches** are boolean expressions a definition declares (a 555's `V(THR) > 2/3 V(VCC)`), read like inputs. Tri-state outputs scale their driver resistance by a state (`__oe_<pin>`). At reset, digital parts settle with `on_start` and instant drives; settling never reports clock edges, so power-up does not count. Behaviors also receive user controls (`on_control`), so a logic toggle drives its output directly.
+
 ### 4.8 Mode settings
 
 | Setting | Interactive | Analysis |
 | --- | --- | --- |
 | reltol | 1e-2 | 1e-3 (user-settable) |
 | Max Newton iterations per step | 20 | 100 |
-| Step control | Fixed nominal, halving on failure | Truncation-error control, min and max step |
-| Integration | Trapezoidal, Euler at breakpoints | User choice: trapezoidal or Gear-2 |
+| Step control | Fixed nominal, halving on failure, landing on digital events | Error-controlled step choice, maximum step, landing on digital events |
+| Integration | θ-method with θ = 0.6 (damped trapezoidal), Euler at breakpoints | Trapezoidal (θ = 0.5); Gear-2 still to do |
 | On non-convergence | Accept step, flag component, continue | Abort with a diagnostic naming the nodes that failed |
 | Pacing | Real time × speed factor | As fast as possible |
 | Output | Snapshots and probed signals only | Every node and branch current, every accepted step |
+
+Why θ = 0.6 in interactive mode: trapezoidal integration is A-stable but not L-stable, so on a stiff edge a fast mode is multiplied by −1 every step and rings instead of decaying. The astable sample showed its collector spiking to 16 V on a 9 V supply. The θ-method multiplies such a mode by −(1−θ)/θ, −0.67 at θ = 0.6, so it dies out within a few steps, and the collector stays within 0 to 7.5 V. Analysis mode keeps exact trapezoidal for accuracy.
 
 ## 5. Component model contract
 
@@ -190,10 +230,11 @@ A component is data, not solver code: it declares its pins, parameters and branc
 Expressions are built as a graph, never as strings evaluated at run time. Leaves and operations:
 
 - **Leaves:** constants, parameters, node voltages V(n) or V(a, b), branch currents I(branch), time t, temperature, state variables.
-- **Arithmetic:** + − × ÷, pow, neg, abs, min, max.
+- **Arithmetic:** + − × ÷, pow (`^`, `**`), neg, abs, min, max, floor.
 - **Functions:** exp, ln, log10, sqrt, sin, cos, tan, atan, tanh, sinh, cosh.
 - **Safe variants:** `limexp(x)`, exponential that continues linearly beyond x = 80 so junctions cannot overflow; `safe_div`, `safe_sqrt`.
-- **Conditionals:** `select(cond, a, b)` with comparisons. Conditionals on voltages are allowed but create kinks; the library provides `smoothstep` and `smooth_abs` and documentation recommends them.
+- **Conditionals:** `select(cond, a, b)` (also `cond ? a : b`) with comparisons `< <= > >= == !=` and logic `&& || !`. Conditionals on voltages are allowed but create kinks; the library provides `smoothstep` and `smooth_abs` and documentation recommends them.
+- **Numbers** may use engineering notation (`4k7`, `100n`, `2.2M`); `pi` is a constant.
 
 **Compilation pipeline** (in `ecs-expr`): constant folding (non-live parameters are folded at compile time), common subexpression elimination, then forward-mode automatic differentiation with respect to every unknown the expression reads. The result is a flat instruction tape per component that computes values and all partial derivatives in one pass. A tape interpreter in Rust runs it in the hot loop. A JIT (for example Cranelift) is out of scope but the tape format must not rule it out.
 
@@ -230,12 +271,27 @@ pub trait Behavior: Send {
 
 `EventCtx` lets a behavior read digital input levels, node voltages and state; write state; schedule digital outputs and timers. It cannot add nodes or change expressions. Structural changes require a recompile.
 
+*Implementation notes (0.1.0):* behaviors take `&self` and keep per-instance data in `EventCtx::state`, so one `Arc<dyn Behavior>` serves every instance. Definitions also declare `controls` (`Toggle`, `Momentary`, `Slider`) and named subexpressions `lets` (the Rust side of `c.let`). Switch positions and the potentiometer wiper need no behavior code: controls set state variables or live parameters directly.
+
 ### 5.4 Rules the engine enforces
 
 - Every expression must be finite for any input. The engine checks for NaN and infinity after each evaluation and reports the component by name.
 - Voltage branches in a loop with no resistance (two ideal sources in parallel) and nodes with no DC path to ground are detected at compile time and reported, not left to the solver.
 - Subcircuits flatten at compile time. Their internal nodes are namespaced (`X1.Q3.b`) so probes and error messages stay readable.
 - A `ComponentDef` is immutable after loading. Live parameters are the only values that change during a run.
+
+### 5.5 Components defined in a schematic (D16)
+
+A schematic's `components` list holds prototypes with ids `local.<name>`. Each has a name, category, reference prefix, description, its own **symbol** (drawing plus named pins on the 20-unit grid; the pins are the ports), **parameters** (name, default, unit, description) and an **implementation**:
+
+| Implementation | How it compiles |
+| --- | --- |
+| `schematic` | A nested schematic stored inline. Net labels named like the symbol's pins are the ports; ground inside is the global ground. Inner part values written `{expression}` use the component's parameters (`{R}`, `{2 * gain}`) and are evaluated per instance when the subcircuit flattens. Becomes a `DefKind::Subcircuit`. |
+| `external_schematic` | The same, read from an `.ecs` file relative to the schematic's folder. |
+| `script` | JavaScript source (section 6) stored inline; its pins must be on the symbol. |
+| `external_script` | A `.js` file relative to the schematic's folder. |
+
+Prototypes compile into the catalog whenever they change (`crates/ecs-app/src/components.rs`), in dependency order so one may use another. A library part can be copied into an editable prototype: definitions made of expressions convert to equivalent JavaScript (expressions print back to source that parses to the same tree); Rust-behaviour parts and subcircuits start from a template instead.
 
 ## 6. Scripting with JavaScript
 
@@ -313,6 +369,8 @@ export default component({
 - **Hot reload:** the app watches user component folders. Saving a `.js` file reloads the definition and recompiles open circuits that use it. Load errors appear in the problems panel with file and line.
 - **Built-ins in JavaScript:** a few built-in components are also shipped as JavaScript (for example the flip-flop above) and serve as reference examples for users.
 
+*Implemented (`ecs-script`, QuickJS through `rquickjs` 0.14):* the API of 6.1 is a JavaScript prelude; the script runs once and hands a JSON description to Rust, which parses every `e` template with `ecs_expr::parse`, so templates and the inspector share one parser. Each template records its own `file:line:column` from the stack, so parse errors point at the template. Module files are loaded as scripts with the `export default` rewritten to a global; `import` is not available yet. The sandbox removes `eval` and the `Function`, async, generator and async generator constructors, adds no host modules (no `std`, `os`, `require`, `fetch`, timers), caps memory at 64 MB and stops any load or hook after 250 ms through the interrupt handler. Hooks run in a QuickJS runtime owned by the calling thread (a thread-local per script), exchanging JSON with the engine; a hook error is kept and shown in the problems list through `Behavior::diagnostics`. Hot reload polls `~/.config/electrocraft/components/*.js` once a second; **File ▸ User Components Folder** creates it, writes `electrocraft.d.ts` and example copies, and opens it. The two 6.2 examples ship embedded and appear in the Components panel.
+
 ## 7. Built-in component library (v1)
 
 v1 ships about 60 components, enough for typical hobby and education circuits. Each is defined against section 5 and has a test circuit with a known answer (section 11).
@@ -333,6 +391,8 @@ v1 ships about 60 components, enough for typical hobby and education circuits. E
 
 Later: MOSFET level 3 and BSIM, motors, speakers with audio output, microcontroller blocks, optocouplers, SCR and TRIAC.
 
+*Implemented (55 definitions: 53 in `ecs-lib` plus the two JavaScript references):* ground; resistor, capacitor (with leakage), inductor (with series resistance), potentiometer (live wiper), lamp; DC voltage, battery, DC current, sine, function generator (sine, square, triangle, sawtooth), all with an `AC` magnitude for AC analysis; diode, Zener, Schottky, LED; SPST, push button, SPDT; NPN and PNP (Ebers-Moll transport with `Nf`, Early effect and junction capacitances); N- and P-MOSFET (level 1); N- and P-JFET (Shichman-Hodges with gate diodes); op-amp, comparator; behavioural CMOS 555 (7555-like output, watches for trigger, threshold and reset, a discharge switch and an internal divider); VCVS, VCCS, CCVS, CCCS; AND, OR, NAND, NOR, XOR, XNOR, NOT, buffer, tri-state buffer, D, JK and T flip-flops, 4-bit counter, 4-bit shift register, 2:1 multiplexer, BCD to 7-segment decoder (hex digits included); logic toggle, clock, logic probe; 7-segment display; voltmeter, ammeter. The oscilloscope is not a part (D15, section 9.5). Not yet: transformer, fuse, PWL and pulse with breakpoints, arbitrary-expression sources (need string parameters), relay, voltage-controlled switch, op-amp macromodel, regulator, LED bar.
+
 ## 8. Model import
 
 There are two routes from a real part to a component. SPICE import is in the main app and comes first, because most manufacturers publish SPICE models. Datasheet conversion is a separate companion tool built later.
@@ -346,7 +406,11 @@ There are two routes from a real part to a component. SPICE import is in the mai
 - **Output:** a component package (section 10) saved to the user library, plus an import report listing anything ignored or approximated.
 - **Dialects:** plain SPICE3 and the common LTspice and PSpice extensions. Encrypted vendor models are not supported.
 
-### 8.2 Datasheet tool (`datasheet-tool`, later phase)
+*Implemented:* continuation lines, `*`, `;` and `$` comments, `.param` with `{expr}` evaluated by the 5.2 language, `.include` and `.lib <file> <section>`, the netlist title line, and `.op`, `.tran`, `.dc` and `.ac dec` analysis cards (the CLI runs them all). Each `.model` copies the matching built-in with its parameters filled in (`IS N BV IBV CJO` for diodes; `IS NF BF BR VAF CJE CJC` for BJTs; `KP VTO LAMBDA` and instance `W/L` for MOSFETs; `BETA VTO LAMBDA IS` for JFETs) and lists the rest in the report. Each `.subckt` becomes a subcircuit definition that the compiler flattens (`X1.Q3`), nested to any depth. F and H sources and B sources read other elements' currents through `I(Vx)`, resolved to the sibling first; B sources' node voltages become extra pins. Coupled inductors (`K`) are reported and ignored. **Import dialog** (Analyze ▸ Import, or File): paste or open, review components and the report, choose a symbol per subcircuit with a port-to-pin mapping (three-port op-amp-like subcircuits default to the op-amp symbol), and **Add to library**: a package folder `~/.config/electrocraft/packages/<name>/` with `package.json` and `models/<original file>` that loads at every start. **Export** writes a SPICE netlist (with `.model` cards for diodes, transistors and JFETs) that imports back to the same operating point.
+
+![SPICE import dialog](docs/screenshots/19-spice-import.png)
+
+### 8.2 Datasheet tool (`datasheet-tool`, binary `electrocraft-datasheet`)
 
 A datasheet gives numbers and curves, not equations. The tool fits parameters of a known model family to those numbers and writes a JavaScript component.
 
@@ -357,51 +421,134 @@ A datasheet gives numbers and curves, not equations. The tool fits parameters of
 5. Review: overlay plots of datasheet points against the fitted model, with error per point.
 6. Export a JavaScript component file and a fit report into a component package.
 
+*Implemented:* families diode, LED, Zener (forward points plus Vz at Iz), NPN (hFE versus Ic at a Vce, and Vbe versus Ic) and N-MOSFET (Id versus Vgs at a Vds); op-amp macromodel and regulator are still to do. Each point is simulated on a test bench with the built-in model (a current source into the diode; Vce and base-current sources for hFE; a bisected base voltage for Vbe; gate and drain sources for the MOSFET). Levenberg-Marquardt fits the family's parameters (log space for scale parameters) from closed-form starting values. The digitizer loads a PNG or JPEG, takes two calibration clicks per axis with typed values (linear or log axes), then adds a point per click to the selected series. Review overlays the points on the model curve, with the error of each point in the table. Export writes `<part>.js` (the 6.1 API with the fitted defaults) and `<part>.fit.md` (parameters, per-point errors and the equivalent SPICE `.model`) into the user components folder by default, where Electrocraft hot-reloads it. The app starts the tool from Analyze ▸ Datasheet Fit and from the desktop action. `--example diode|npn` loads the datasheet typicals used by the tests.
+
+![Datasheet tool fitting a 2N3904](docs/screenshots/20-datasheet-fit.png)
+
 ## 9. Editor & UI
 
 egui owns every widget, panel and input event. Raylib only draws the schematic into an off-screen texture that egui shows as an image. Editing logic lives in `ecs-schematic` and `ecs-app`, never in the renderer.
 
-### 9.1 Window layout
+### 9.1 Window layout (SolidCraft visual language, D10)
 
-- **Top:** menu bar, toolbar (select, wire, place, probe; run, pause, reset; speed slider), command palette (Ctrl+K).
-- **Left:** component palette: searchable, grouped by category, favorites, user and imported packages.
-- **Center:** schematic canvas.
-- **Right:** inspector for the selection: parameters with units, live controls (slider for a potentiometer, toggle for a switch), probe values.
-- **Bottom:** scopes, problems panel (load errors, compile errors, convergence warnings), analysis log.
-- **Floating or docked:** analysis plot windows. Use a dock layout crate such as `egui_dock`.
-- **Status bar:** simulated time, requested and actual speed, step size, solver state.
+The shell copies SolidCraft's structure and palette so the Craft apps feel like one product. For comparison, the SolidCraft 0.30.1 references are in `docs/references/solidcraft/`:
+
+| SolidCraft reference | Electrocraft |
+| --- | --- |
+| ![SolidCraft Start](docs/references/solidcraft/solidcraft-0.30.1-start.png) | ![Electrocraft Start](docs/screenshots/01-start-screen.png) |
+| ![SolidCraft Design workspace](docs/references/solidcraft/solidcraft-0.30.1-design-workspace.png) | ![Electrocraft Schematic workspace](docs/screenshots/06-led-switch-open.png) |
+
+- **Title bar** (no OS decorations; drag to move, double-click to maximize): logo and name, Home, a **File** menu, Save, Undo and Redo icons, the document tab (name, `•` when modified, close button), `+` for a new schematic; on the right Settings, Help, a monospace version badge and the window controls.
+- **Ribbon:** a **Schematic Workspace** card on the left; tabs **Schematic, Digital, Simulate, Analyze, View**; big icon buttons over a caption with a chevron, in groups separated by dividers; a **Search commands** box with a `Ctrl K` chip on the right (command palette).
+  - *Schematic:* Tools (Select, Wire, Label, Text) · Place (Resistor, Capacitor, Inductor, Ground, DC Source, Sine, Switch, LED, NPN; drawn with the real symbols) · Modify (Rotate, Mirror, Duplicate, Delete) · Component (New, Edit, Enter, Back; section 9.7).
+  - *Digital:* Gates (AND, OR, NOT, NAND, NOR, XOR) · Sequential (D FF, JK FF, Counter, Shift Reg) · I/O (Toggle, Clock, Probe, BCD→7, 7-Segment, 555).
+  - *Simulate:* Transport (Run/Pause, Step, Reset) · Instruments (Probe, Voltmeter, Ammeter, Clear Scope) · Display (Voltage, Current, Scopes).
+  - *Analyze:* DC Op Point · Analyses (Op Table, DC Sweep, Transient, AC Sweep; each dialog can add a parameter step) · SPICE (Import, Export) · Models (Datasheet Fit, JS Components).
+
+![Digital ribbon tab with the counter sample](docs/screenshots/15-digital-ribbon-counter.png)
+  - *View:* Navigate (Fit, Zoom in/out, Pan) · Show (Grid, Voltage, Current) · Panels.
+- **Components panel** (floating card top-left, where SolidCraft has its Browser): searchable, grouped by category, each row with a symbol thumbnail; clicking arms placement.
+- **Inspector** (floating card top-right, shown for a selection): name, parameters with units in engineering notation (red while unreadable), enum pickers, live controls (wiper slider, switch toggle), live probe values, **Edit Component…** and **Enter** (9.7), description, and a **Scope** section: the part's or net's code and a checkbox per quantity (9.5).
+- **Navigation toolbar** (floating, bottom centre of the canvas): Select, Pan, Wire · Fit, Zoom in, Zoom out · Grid, Voltage colours, Current dots.
+- **Simulation bar** (bottom, in the place of SolidCraft's History bar): Reset, Step, Run/Pause, simulated time, speed and time step pickers, achieved speed, a problems button, and on the right the tool hint (Wirecraft style) and canvas render timing.
+- **Scope** (9.5): docked at the bottom above the Simulation bar (resizable), or floating in its own resizable window, whenever it has channels.
+- **Start screen** (Home, Esc returns to the document): blue sidebar (Back to document, Start, New, Open, Save, Save As, Export netlist, Keyboard shortcuts, About), and New cards, Recent files and Samples with live-rendered thumbnails.
+- **Command palette** (`Ctrl+K`): every command and every component, filtered as you type, arrow keys and Enter.
+
+![Simulate ribbon tab](docs/screenshots/03-ribbon-simulate-tab.png)
+
+**Palette tokens** (sampled from SolidCraft 0.30.1; `crates/ecs-app/src/theme.rs`): title bar `#1C1F26`, canvas `#2E3440`, panels and ribbon `#272B34`, bottom bar `#21252D`, navigation toolbar `#2B303B`, document tab `#353B47`, active tab `#2A466E` with text `#9BC5F3`, accent `#3A88EE`, icon blue `#4EA1DC`, text `#E6EAF2`, Start sidebar `#1E5080` (selected `#2E6395`), Start background `#1F232B`, selected card `#1B3048`. Type: Inter (Regular, SemiBold) and Noto Sans Mono for shortcuts and numbers, embedded (SIL OFL).
 
 ### 9.2 Canvas integration
 
-- Raylib renders the schematic into a `RenderTexture2D` sized to the canvas in physical pixels (respecting DPI scale). The pixels are copied into an egui texture, the same path as Meshcraft.
-- Re-render only when the canvas is dirty: an edit, a pan or zoom, a hover change, or new simulation state while running.
-- egui forwards pointer and keyboard input over the canvas rect. The app converts it to schematic coordinates and feeds it to the active tool's state machine.
-- **Performance budget:** a 2560×1440 canvas is about 15 MB per read-back. Measure the copy cost early (phase 1). If it is too slow at high resolution while the simulation animates, see open question Q2.
+- Raylib renders on its own thread (3, D3) into a `RenderTexture2D` of twice the canvas size in physical pixels (respecting DPI), downsampled 2×2 into a second texture, read back and uploaded into an egui texture.
+- The UI rebuilds the display list every frame and submits it only when it changed: an edit, a pan or zoom, a hover change, a pointer-following overlay, or new simulation state while running.
+- egui forwards pointer and keyboard input over the canvas rect. The app converts it to schematic coordinates and feeds it to the active tool.
+- **Measured read-back cost** (phase P3 requirement): the Simulation bar shows draw and read-back time. In a private Xvfb display with Mesa llvmpipe (software OpenGL), a canvas of about 1600×800 takes 8 to 15 ms to read back and 25 to 45 ms in total; about 1280×480 takes 3 ms to read back and 11 ms in total. Hardware OpenGL numbers at 1080p and 1440p are still to be recorded on the owner's machine (Q2).
 
-### 9.3 Editing
+### 9.3 Editing and canvas operation (Wirecraft conventions, D11)
 
-- Grid with snapping; place, move, rotate (R), mirror (M), delete.
-- Wire tool with orthogonal routing; junctions created automatically where a wire ends on another wire; wires stretch when parts are dragged.
+| Input | Action |
+| --- | --- |
+| Wheel | Zoom at the pointer (factor `exp(0.004·Δ)`, 10% to 800%) |
+| Middle drag, Space + drag, or the Pan tool (H) | Pan |
+| Click an item | Select it; Shift+click adds, Ctrl+click removes (idempotent) |
+| Drag a selected item | Move after a 3 px threshold, snapped to the 20-unit grid; previewed live (wires stretch) and committed as one undo step on release |
+| Drag on empty canvas, left to right | Window selection: blue, solid; selects items entirely inside |
+| Drag on empty canvas, right to left | Crossing selection: green, dashed; selects anything it touches |
+| Right click | Context menu: Rotate, Mirror, Duplicate, Copy, Delete, Paste, the common parts, Wire, Net label, Probe, Fit |
+| Click a switch or push button while running | Operate it (iCircuit feel); a push button is closed while held |
+| Esc | Cancel the wire or gesture, then return to Select, then clear the selection; on the Start screen, back to the document |
+| W, L, T, P | Wire, net label, text, probe tools |
+| R, M | Rotate a quarter turn, mirror (also while placing) |
+| `/` | Flip the wire elbow (horizontal-first or vertical-first) |
+| Del, Backspace | Delete |
+| Ctrl+C, Ctrl+X, Ctrl+V, Ctrl+D, Ctrl+A | Copy, cut, paste at the pointer, duplicate, select all |
+| Ctrl+Z, Ctrl+Y / Ctrl+Shift+Z | Undo, redo |
+| F, G, + / − | Fit, grid, zoom |
+| F5, F6, F7 | Run/pause, step, reset |
+| Ctrl+K, Ctrl+N, Ctrl+O, Ctrl+S, Ctrl+Shift+S | Palette, new, open, save, save as |
+
+| Crossing selection (right to left) | Placement shadow follows the pointer |
+| --- | --- |
+| ![Crossing selection](docs/screenshots/04-crossing-window-selection.png) | ![Placement shadow](docs/screenshots/08-placement-shadow.png) |
+| **Wire routing:** orthogonal preview from a pin; clicking a pin or wire finishes | **Context menu** with the part palette |
+| ![Wire routing](docs/screenshots/09-wire-routing.png) | ![Context menu](docs/screenshots/10-context-menu.png) |
+
+- Grid with snapping; place, move, rotate (R), mirror (M), delete. A placed part keeps the tool armed for the next one; Esc stops.
+- Wire tool with orthogonal routing; junctions are drawn wherever three or more ends meet or an end lands on another wire's interior. Crossing wires without an end there do not connect. Wires stretch (rubber band, kept orthogonal) when parts move or rotate.
 - Box and click selection, copy and paste, duplicate.
-- Net labels and power symbols that connect by name; text annotations.
-- Undo and redo for every edit (command pattern in `ecs-schematic`).
-- Zoom with the wheel, pan with the middle button or space+drag, fit to view.
-- Symbols are vector files (lines, arcs, circles, polygons, text, pin points), drawn by Raylib. v1 ships ANSI-style symbols. IEC style is a later option.
+- Net labels connect by name; `GND` and `0` are ground. Text annotations.
+- Undo and redo for every edit: each `Command` in `ecs-schematic` is one step, undone by restoring the document snapshot taken before it. Operating a switch or the wiper is not an edit and does not create undo steps.
+- Symbols are vector primitives (lines, polylines, arcs, circles, text, pin points) on a 20-unit grid, ANSI style, with optional open and closed variants (switches) and a glow region (LED, lamp). They are defined in `ecs-schematic::symbols` and serialize to the `.sym.json` shape of section 10.
+
+![Command palette](docs/screenshots/11-command-palette.png)
 
 ### 9.4 Live visualization (the iCircuit feel)
 
-- **Wire color by voltage:** a diverging color scale, positive green through grey at 0 V to negative red, auto-ranged to the circuit's supply rails.
-- **Current dots** move along wires and through parts, with speed proportional to current on a log scale, so microamps and amps are both visible.
-- **Part effects:** LEDs and lamps glow, 7-segment displays light, switches show their state, relays click over.
-- **Hover:** tooltip with the node voltage, or the part's current, voltage and power.
-- **Problem markers:** a badge on any part flagged by the solver.
-- After a DC operating point analysis, node voltages and part currents are annotated on the schematic until the next edit.
+- **Wire colour by voltage:** a diverging scale, positive green through grey at 0 V to negative red, auto-ranged to the largest node voltage.
+- **Current dots** move along wires and through two-pin parts, with speed proportional to current on a log scale (8 px/s at 1 nA, capped at 160 px/s), so microamps and amps are both visible. Wire currents are solved per net on a spanning tree of the wire graph from the pin currents.
+- **Part effects:** LEDs glow in their colour and lamps in warm white, in proportion to their `brightness` probe; switches and push buttons draw their state; meters print their reading.
+- **Hover:** tooltip with the net voltage, or the part's voltage and every probe (current, power, brightness).
+- **Problem markers:** a badge on any part flagged by the solver; markers fade after 5000 clean steps. The Simulation bar's problems button lists them with unconnected pins and compile errors.
+- After **DC Op Point** (Analyze), node voltages and part currents are annotated until the next edit.
+
+| Switch open | Switch closed: the LED lights and current flows |
+| --- | --- |
+| ![LED and switch, open](docs/screenshots/06-led-switch-open.png) | ![LED and switch, closed](docs/screenshots/07-led-switch-closed-current.png) |
+| **Inspector** with a live wiper slider and meter | **DC operating point** annotations |
+| ![Inspector](docs/screenshots/13-inspector-live-slider.png) | ![DC operating point](docs/screenshots/14-dc-operating-point.png) |
 
 ### 9.5 Scopes and plots
 
-- **Scopes (live):** click a node or part with the probe tool to add a channel. Each scope has time per division, per-channel scale and offset, auto-scale, edge trigger with level, XY mode, and two cursors with delta readout.
-- **Plot windows (analysis):** built with `egui_plot`. Multiple traces, linear and log axes, Bode layout (magnitude and phase), cursors, FFT of a transient trace, export to CSV and PNG.
-- A parameter-step result shows one trace per step, colored along a scale with a legend.
+- **Oscilloscope (live, D15):** not a part. Select a wire or a part and tick quantities under **Scope** in the inspector; click with the Probe tool (P: a wire adds its net, a part its current, or its voltage when it has no current); or type a **formula** in the scope legend. Every net and part has a code distinct from its internal id: nets use their label or a stable `n<wire id>` (`p<part>_<pin>` when no wire touches them), parts their reference. Codes are variables in formulas: `out`, `in - out`, `R1.I * R1.V`, `Q1.C.I / Q1.B.I`, `D1.P`, and `t`. Each terminal has `.V` (to ground) and `.I` (into the terminal, summed over the definition's branches and digital pins); two-terminal parts also have `.V` (first pin to second) and `.I`; probes keep their names. **Codes…** lists every code with a description. Formulas compile once into tapes over at most 64 raw signals that the simulation thread samples; errors (unknown code, too many signals) show under the channel.
+- **Layout:** one **lane per channel**, each with its own Y axis labelled in engineering units on a 1-2-5 grid, so a crowded scope stays readable; **Overlay** puts every channel on one grid. **Float** detaches the scope into a resizable window (default 820 × 560) and **Dock** returns it. Controls: time/div (Auto = 4 × speed, or 1 µs to 1 s), edge trigger on channel 1 (rising or falling, level at mid-range, 10% into the screen), Hold, XY (channel 2 against channel 1), and cursors A (click) and B (right-click) with per-lane readouts, Δt and 1/Δt. Numbered badges on the canvas mark the nets and terminals being shown. Probes saved by older files become channels on load. *Still to do:* per-channel scale and offset, trigger level, currents at subcircuit ports.
+- **Plot windows (analysis):** `egui_plot` windows, one per run; parameter steps overlay one trace per value. A trace picker lists every node voltage and branch current (named nets first). AC results use a Bode layout (magnitude in dB over phase, log frequency, linked axes). Click and right-click place cursors A and B with values and Δ (and 1/Δ for time). FFT turns the selected transient traces into spectra. CSV export writes every trace; PNG export saves the window.
+
+| Scope lanes with cursors A and B | Scope checkboxes in the inspector |
+| --- | --- |
+| ![Oscilloscope](docs/screenshots/16-oscilloscope-cursors.png) | ![Scope section](docs/screenshots/21-scope-inspector.png) |
+| **Floating scope window** | **Bode plot of the RC low-pass** |
+| ![Floating scope](docs/screenshots/22-scope-floating.png) | ![AC sweep](docs/screenshots/17-analysis-ac-bode.png) |
+
+![Transient analysis of the multivibrator](docs/screenshots/18-analysis-transient.png)
+
+### 9.6 Commands and automation (D14, MCP-ready)
+
+All actions are `Cmd`s with a stable id and JSON arguments in one registry (`crates/ecs-app/src/commands.rs`): `file.*`, `edit.*`, `schematic.place|wire|set_param|delete_part`, `scope.add|remove|clear`, `component.new|edit|enter|exit`, `tool.*`, `sim.toggle_run|step|reset|control`, `analysis.dc_op_annotate|dialog|run`, `view.*`, `app.*`. The command palette lists the registry; `electrocraft --command-catalog` prints it as JSON; `electrocraft --commands file.json` runs a list of `{"id", "args"}` at start (the screenshot script uses it). An MCP server (next step) maps one tool per registry id, queued onto the UI thread as Meshcraft does, plus read-only tools for the live snapshot and analysis results; a test checks every catalog entry builds a command.
+
+### 9.7 Component editor and hierarchical editing (D16)
+
+- **Edit Component…** (inspector, context menu, Schematic ▸ Component ▸ Edit, Ctrl+E) opens the prototype of the selected part. A part of a library component gets an editable copy (`local.*`); Apply points this part, or every part of that type, at the copy.
+- **New** opens the editor on a blank two-pin component; Apply arms its placement.
+- The editor window has three tabs. *General:* name, prefix, category, description, ports and parameters. *Symbol:* a canvas with a 20-unit pin grid and Select (click, drag, Delete), Line, Rect, Circle, Polyline, Text and Pin tools; **Start from** an existing symbol (replace, or add its drawing), **Box** (a box with the current pins), Clear; the pin list renames and removes pins. *Implementation:* Schematic, External schematic, JavaScript (code editor with Template) or External JavaScript (path with Browse…). **Check** compiles without applying and reports pins, parameters and problems; Apply adds the port labels for new pins to an inner schematic.
+- **Enter** (Ctrl+Enter, inspector, context menu) opens a part's inner schematic on the canvas with a breadcrumb and **Back**. Port labels are created for every pin the first time. The inner schematic simulates on its own while open; Back writes it into the prototype as one undoable edit (an external file is saved instead), and every instance updates. Save while inside writes the outer document with the inner one folded in.
+
+| Component editor: symbol | Inside a component |
+| --- | --- |
+| ![Component editor](docs/screenshots/23-component-editor-symbol.png) | ![Inner schematic](docs/screenshots/24-component-inner-schematic.png) |
+
+![Custom component sample](docs/screenshots/25-custom-component-sample.png)
 
 ## 10. File formats
 
@@ -409,18 +556,20 @@ All native files are pretty-printed JSON (serde) with a `format_version` field a
 
 | File | Extension | Contents |
 | --- | --- | --- |
-| Schematic | `.ecs` | Metadata; component instances (unique id, definition id and version, package, position, rotation, mirror, parameter overrides, reference label like R1); wires as polylines; junctions; net labels; text; probes and scope setup; simulation settings; saved analysis presets |
+| Schematic | `.ecs` | Metadata; component instances (unique id, definition id and version, package, symbol, position, rotation, mirror, parameter overrides as typed, saved control states, reference label like R1); wires as polylines; net labels; text; scope channels (`scope`: name and formula; older `probes` migrate to channels); component prototypes (`components`: id, name, category, prefix, description, symbol, parameters, and an implementation tagged `schematic`, `external_schematic`, `script` or `external_script`); simulation settings (speed, time step); saved analysis presets (P7). Junctions are derived from the wires, not stored. |
 | Symbol | `.sym.json` | Vector primitives, pin points with names and directions, label anchors, bounding box |
-| Component package | folder, or `.ecspkg` (zip) | `package.json` manifest (id, name, version, author, license, list of components); `.js` component files; `symbols/`; `models/` with the original SPICE files; `docs/` |
-| Analysis result | `.ecsr` | Analysis command and settings, then named vectors (time or frequency axis plus signals). Binary payload with a JSON header, for size. |
+| Component package | folder, or `.ecspkg` (zip) | `package.json` manifest (format version, name, version, author, license, `models` (original SPICE files) and `components` (id, chosen symbol, port-to-pin names)); `.js` component files; `symbols/`; `models/` with the original SPICE files; `docs/`. *Implemented:* folders with `package.json` and `models/`; zipped packages and `symbols/` are still to do. |
+| Analysis result | `.ecsr` | Analysis command and settings, then named vectors (time or frequency axis plus signals). Binary payload with a JSON header, for size. *Not yet:* results export as CSV. |
 
-**Exports:** SPICE netlist (to cross-check a circuit in ngspice), CSV of any plot or scope, PNG of the canvas. SVG export of the schematic comes later.
+**Exports:** SPICE netlist (to cross-check a circuit in ngspice), CSV of any plot or scope, PNG of the canvas. SVG export of the schematic comes later. *Implemented:* SPICE netlist, CSV and PNG of plot windows.
 
 **Compatibility rule:** a schematic stores the version of each component definition it used. If a newer version is installed, the app offers to update, and keeps the old behavior until the user accepts.
 
 ## 11. Testing & validation
 
 The simulator is checked against math first, then against ngspice. Every phase in section 12 ends with its tests green in CI.
+
+*Implemented in 0.1.0:* autodiff property tests against finite differences, plus folding/CSE against a naive tree walk (`ecs-expr/tests/autodiff.rs`); analytic circuits within 0.1% (divider, Wheatstone, RC charge, RL rise, series RLC ringing period, RC low-pass gain at the corner, diode operating point against bisection) plus an astable multivibrator and loop/floating-node checks (`ecs-sim/tests/analytic.rs`); schematic commands headless (rotation, netlist of a divider, T junctions and crossings, labels, undo/redo, rubber-band wires, rotation keeping connections, window and crossing selection, byte-identical save/load/save); every sample circuit fully connected and simulating, the astable running 30 ms with no convergence flags, the LED lighting when its switch closes; release helpers (AppImage name, update information, desktop keys AppGlider reads). Phases P5 to P8 added: gate truth tables, start-up settling, a D flip-flop dividing a clock, a 555-clocked counter driving a decoder and display at the expected 686 Hz (`ecs-sim/tests/digital.rs`); subcircuit flattening and cross-element currents; AC corner (−3 dB, −45°), DC sweeps (live and recompiled), adaptive transient steady state, parallel parameter step and FFT (`tests/analyses.rs`); the 6.2 examples loading and simulating, sandbox escapes (`eval`, the `Function`, async-function constructors, `require`, `std`, `os`, `fetch`, `setTimeout`), runaway hooks and loads stopped, template errors on the right line (`ecs-script/tests/scripts.rs`); SPICE import of a transistor model against hand analysis, an op-amp subcircuit in an active low-pass against the closed-form Bode response, B and F sources, export round trip, and an ngspice comparison that runs when ngspice is installed (CI installs it) (`ecs-spice/tests/import.rs`); diode and NPN fits from 1N4148 and 2N3904 typicals within 5% and a MOSFET fit (`datasheet-tool`); every definition's pins on its symbol, the counter sample counting, and every registry command building (`ecs-app`). 70 tests in all, plus the release-script unit tests. Not yet: the full ngspice corpus, the convergence torture set, criterion benchmarks, renderer snapshot tests.
 
 - **Expression engine:** property tests (`proptest`) comparing autodiff derivatives with finite differences over random expressions and inputs; constant folding and CSE must not change results.
 - **Analytic circuits:** results within 0.1% of closed-form answers: voltage divider, RC charge and discharge, RL, series RLC ringing frequency and damping, RC low-pass corner frequency in AC, Wheatstone bridge.
@@ -436,7 +585,36 @@ The simulator is checked against math first, then against ngspice. Every phase i
 
 The work is split into nine phases. The engine (P1, P2) and the editor (P3) proceed in parallel and meet in P4, the first version that feels like iCircuit. v1 is P0 to P7; the datasheet tool follows.
 
-&#91;embedded content: phase plan · 9 phases, 1 release gate\]
+```mermaid
+flowchart LR
+  P0[P0 Foundations] --> P1[P1 Linear engine]
+  P1 --> P2[P2 Nonlinear + analyses]
+  P0 --> P3[P3 Editor + canvas]
+  P2 --> P4[P4 Live simulation]
+  P3 --> P4
+  P4 --> P5[P5 Digital]
+  P4 --> P6[P6 JavaScript]
+  P4 --> P7[P7 Analysis UI + SPICE]
+  P5 --> V1{{v1 release gate}}
+  P6 --> V1
+  P7 --> V1
+  V1 --> P8[P8 Datasheet tool]
+```
+
+**Status at 0.1.0** (Nov 10, 2026):
+
+| Phase | Status | Done | Remaining |
+| --- | --- | --- | --- |
+| P0 | Done | Workspace with every crate; `ecs-units`, `ecs-expr` (parser, folding, CSE, autodiff tapes, linearity), `ecs-model`; CI workflow | — |
+| P1 | Mostly done | Netlist compiler, topology checks, MNA from tapes, `LinearSolver` + dense LU, BE and trapezoidal, linear fast path via factor reuse, `electrocraft-cli` (the full SPICE importer and every analysis card) | `faer` sparse LU and benchmark; PWL and pulse breakpoints |
+| P2 | Mostly done | Newton with pn limiting, gmin, residual test; DC OP with gmin and source stepping; error-controlled transient, AC, DC sweep, parameter step; diodes, BJTs, MOSFETs, JFETs, op-amp, comparator, switches, lamp | Step rejection with a true LTE estimate, Gear-2, relay, fuse, ngspice corpus, torture set |
+| P3 | Mostly done | eframe glow shell (D10), Raylib off-screen canvas on its own thread with read-back timing, ANSI symbols for every built-in, editing (D11), undo/redo, netlist extraction, `.ecs` save/load, samples | Hardware read-back numbers at 1080p/1440p; `.sym.json` files on disk; renderer snapshot tests |
+| P4 | Done | Simulation thread, command channel, triple-buffered snapshots, SPSC scope ring, pacing within a 60% CPU budget, step halving, damped integration, non-fatal failure with markers, live controls, reset; wire colours, current dots, glows, lit segments, hover, problems list; formula scope (D15) with lanes, overlay, floating window, trigger, hold, XY, cursors and inspector checkboxes | Per-channel scale and offset; currents at subcircuit ports |
+| P5 | Done | Event layer, logic families with hysteresis, Thevenin ramped outputs, watches, tri-state, settling; 21 digital and mixed-signal parts; Digital ribbon tab; counter sample | Pure event-domain digital nets (optimization) |
+| P6 | Done | QuickJS host, full 6.1 API, sandbox and limits, per-thread runtimes, hot reload, problems, `.d.ts`, reference components | ES `import` inside packages; a user guide page |
+| P7 | Done | Analysis dialogs, background jobs with progress and cancel, plot windows (Bode, cursors, FFT, CSV, PNG), DC Op annotation; SPICE import (models, subcircuits, B/E/F/G/H, includes) with symbol and pin mapping into packages; SPICE export | `.ecsr` result files; `.ecspkg` zip packages; linear and octave sweeps |
+| P3+ | Done | Components in a schematic (D16): component editor with symbol drawing, nested and external schematics, inline and external JavaScript, editable copies of library parts, enter/back editing, parameter expressions in subcircuits; custom component sample | Nested prototypes inside inner schematics; symbol arcs and fills in the editor |
+| P8 | Done | `electrocraft-datasheet`: five families, test-bench fitting with Levenberg-Marquardt, curve digitizer, review overlay, JS and report export into the components folder | Op-amp macromodel and regulator families; reading tables from PDFs (Q5) |
 
 P5, P6 and P7 depend only on P4 and can run in any order or in parallel.
 
@@ -444,7 +622,8 @@ P5, P6 and P7 depend only on P4 and can run in any order or in parallel.
 
 - Follow the decision log (section 2). Never add a dependency on WGPU, directly or through a crate's default features.
 - Keep crate boundaries from section 3: `ecs-sim` and below must build and test with no UI crates.
-- Every phase ends with its acceptance tests passing in CI: `cargo fmt --check`, `cargo clippy -- -D warnings`, `cargo test`, plus the phase's own checks.
+- Every phase ends with its acceptance tests passing in CI: `cargo fmt --all --check`, `cargo clippy --workspace --all-targets --locked -- -D warnings`, `cargo test --workspace --locked`, plus the phase's own checks.
+- UI changes come with refreshed screenshots: `python3 scripts/capture_screenshots.py` drives the release binary in a private Xvfb display and rewrites `docs/screenshots/`.
 - Deliver each phase as a series of small, reviewable commits. Public APIs get rustdoc comments.
 - When the spec is unclear or wrong, stop and record the question rather than guessing silently.
 
@@ -511,10 +690,33 @@ P5, P6 and P7 depend only on P4 and can run in any order or in parallel.
 - Separate app implementing 8.2: forms per family, curve digitizer, fitter, overlay review, JavaScript export.
 - **Done when:** a diode and an NPN transistor fitted from their datasheets reproduce the datasheet points within 5%.
 
-## 13. Open questions
+## 13. Packaging and distribution (D12)
 
-- [ ] **Q1 Name:** what is the product called? It sets the crate prefix (`ecs` for now) and the file extensions.
-- [ ] **Q2 Canvas copy:** if reading the Raylib texture back to the CPU is too slow at high resolutions, can Raylib and egui share one OpenGL context, so egui draws Raylib's texture directly (`egui_glow` can register a native texture)? This depends on how Meshcraft creates its Raylib context.
-- [ ] **Q3 Platforms:** Windows and Linux for sure? macOS too? (OpenGL is deprecated on macOS but still works.)
-- [ ] **Q4 License:** open source or closed? It affects which dependencies are acceptable and whether a community component repository makes sense.
+Releases follow Meshcraft: a manual workflow (`.github/workflows/release.yaml`) runs at an existing tag equal to the literal `version` in `crates/ecs-app/Cargo.toml`, with no `v` prefix (`0.1.0`), validates (fmt, clippy, tests), builds every target in parallel and publishes one release with per-file SHA-256 sidecars and `SHA256SUMS.txt`. The target matrix is Meshcraft's six native targets; packaging helpers are standard-library Python in `scripts/release/` with unit tests.
+
+| Target | Artifacts | Status |
+| --- | --- | --- |
+| Linux x86_64 / aarch64 | AppImage (+ `.zsync`), portable `tar.gz` | Scripted and verified locally on x86_64 |
+| Linux | Snap (`core24`, `mesa-2404` GPU content, strict, `grade: stable`), DEB, RPM | Snap packer scripted (`snap.py`); DEB and RPM still to port from Meshcraft |
+| Windows x64 / ARM64 | Portable `zip`; MSI; MSIX with the reserved Store identity (`packaging/windows/store-identity.json`: `K3D0.electrocraft`) | Portable zip in the workflow; MSI and MSIX still to port |
+| macOS Intel / Apple Silicon | Portable `zip`; DMG | Portable zip in the workflow; DMG still to port |
+
+**AppGlider compatibility.** AppGlider installs from GitHub releases and reads each AppImage's own files. Electrocraft releases are shaped to its rules (checked by `scripts/release/appimage.py` after every build and by `test_release.py`):
+
+- **Asset name:** `electrocraft-X.Y.Z-linux-<arch>.AppImage`, the first of AppGlider's preferred patterns (`<stem>-<version>-linux-<arch>.AppImage`, as SolidCraft uses). Meshcraft's `meshcraft-X.Y.Z-<arch>.AppImage` only matches the third. Exactly one AppImage per architecture per release, so AppGlider never has to ask which build to install.
+- **Embedded desktop entry** (`packaging/linux/electrocraft.desktop`): AppGlider keeps `Comment`, `Categories`, `MimeType`, `Keywords`, `StartupWMClass`, `StartupNotify`, `Terminal`, `Exec` and `Actions`, and reads `Name`, `Icon` and `X-AppImage-Version` for the app's identity. All are present. `X-AppImage-Version` is filled at build time, `StartupWMClass=electrocraft` equals the window's app id (`APP_ID` in `main.rs`, checked by a test), and the `new-schematic` action runs `electrocraft --new`.
+- **Icon:** `Icon=electrocraft`, with `electrocraft.png` (512 px) at the AppImage root and as `.DirIcon`, which is where AppGlider looks. The repository icon is named after the project (`packaging/electrocraft.png`, `assets/branding/electrocraft.svg`), which AppGlider's icon discovery ranks first.
+- **Update information:** `gh-releases-zsync|alfu32|electrocraft|latest|electrocraft-*-linux-<arch>.AppImage.zsync` is embedded and the `.zsync` is published, so AppImageUpdate works too.
+- **Runtime:** the type 2 runtime and appimagetool are pinned by SHA-256 (`packaging/appimage-inputs.json`, Meshcraft's pins), with their licence notices shipped inside the AppImage. The AppImage runs without FUSE via `APPIMAGE_EXTRACT_AND_RUN=1`.
+- **Dependencies:** the binary links only glibc, libm and libgcc_s. GLFW (Raylib) and winit (eframe) load X11, Wayland and OpenGL at run time, so nothing else needs bundling. The glibc floor is that of the build host: Ubuntu 22.04 runners give glibc 2.35. Meshcraft's Ubuntu 18.04 container (glibc 2.27) is the target for wider reach.
+- **Companion tool:** `electrocraft-datasheet` ships inside the AppImage and portable archives, reached from a second desktop action (`datasheet-tool`, which runs `electrocraft --datasheet`).
+- **Desktop integration files:** AppStream metadata `io.github.alfu32.electrocraft.metainfo.xml` and the MIME type `application/x-electrocraft` for `*.ecs`.
+
+## 14. Open questions
+
+- [x] **Q1 Name:** Electrocraft (D13).
+- [ ] **Q2 Canvas copy:** read-back is measured and shown live (9.2); software-GL numbers are acceptable. Record hardware numbers at 1080p and 1440p before deciding on sharing one OpenGL context with egui.
+- [ ] **Q3 Platforms:** Windows and Linux for sure? macOS too? (OpenGL is deprecated on macOS but still works.) The release workflow builds all three.
+- [ ] **Q4 License:** open source or closed? The crates and AppStream metadata currently say `MIT OR Apache-2.0`, like Meshcraft and Wirecraft, but no licence files are committed until the owner decides.
 - [ ] **Q5 Datasheet extraction:** should the datasheet tool also read tables straight from PDFs, possibly with AI assistance, or stay with manual entry and curve digitizing?
+- [ ] **Q6 Store listings:** the Microsoft Store identity and the Snap name are reserved (`packaging/msstore`, `packaging/snapstore`, git-ignored). Which store submissions should the next release include?

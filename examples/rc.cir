@@ -1,0 +1,6 @@
+* RC low-pass driven by a 100 Hz square wave: 0 V for 5 ms, then 5 V
+V1 in 0 PULSE(5 0 0 1u 1u 5m 10m)
+R1 in out 1k
+C1 out 0 1u
+.tran 50u 20m
+.end

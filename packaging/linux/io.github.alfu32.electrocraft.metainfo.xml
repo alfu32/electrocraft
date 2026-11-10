@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.alfu32.electrocraft</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT OR Apache-2.0</project_license>
+  <name>Electrocraft</name>
+  <summary>Draw electronic schematics and simulate them live</summary>
+  <description>
+    <p>Place parts, wire them, and watch the circuit run: wires are coloured by
+    voltage, dots show current, LEDs glow, and switches and potentiometers act
+    while the simulation runs. Probe any node into a live scope.</p>
+    <p>The engine uses modified nodal analysis with automatic differentiation,
+    Newton-Raphson and trapezoidal integration.</p>
+  </description>
+  <launchable type="desktop-id">electrocraft.desktop</launchable>
+  <provides>
+    <binary>electrocraft</binary>
+    <mediatype>application/x-electrocraft</mediatype>
+  </provides>
+  <categories>
+    <category>Education</category>
+    <category>Science</category>
+    <category>Electronics</category>
+  </categories>
+  <screenshots>
+    <screenshot type="default">
+      <caption>A transistor multivibrator running live</caption>
+      <image>https://raw.githubusercontent.com/alfu32/electrocraft/main/docs/screenshots/02-workspace-astable-live.png</image>
+    </screenshot>
+  </screenshots>
+  <url type="homepage">https://github.com/alfu32/electrocraft</url>
+  <url type="bugtracker">https://github.com/alfu32/electrocraft/issues</url>
+  <content_rating type="oars-1.1"/>
+  <releases>
+    <release version="0.1.0" date="2026-11-09"/>
+  </releases>
+</component>

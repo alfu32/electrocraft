@@ -1,0 +1,14 @@
+[package]
+name = "ecs-spice"
+description = "SPICE .model/.subckt import. Phase P7 stub."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ecs-model.workspace = true
+ecs-units.workspace = true
+ecs-lib.workspace = true
+ecs-sim.workspace = true
+ecs-expr.workspace = true

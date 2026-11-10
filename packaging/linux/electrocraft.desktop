@@ -1,0 +1,23 @@
+[Desktop Entry]
+Type=Application
+Name=Electrocraft
+GenericName=Circuit Simulator
+Comment=Draw electronic schematics and simulate them live
+Exec=electrocraft %f
+Icon=electrocraft
+Terminal=false
+StartupNotify=true
+StartupWMClass=electrocraft
+Categories=Education;Science;Electronics;Engineering;
+Keywords=circuit;electronics;schematic;simulator;spice;analog;breadboard;
+MimeType=application/x-electrocraft;
+Actions=new-schematic;datasheet-tool;
+X-AppImage-Version=@VERSION@
+
+[Desktop Action new-schematic]
+Name=New Schematic
+Exec=electrocraft --new
+
+[Desktop Action datasheet-tool]
+Name=Datasheet Model Fitting
+Exec=electrocraft --datasheet

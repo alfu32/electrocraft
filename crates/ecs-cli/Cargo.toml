@@ -1,0 +1,15 @@
+[package]
+name = "ecs-cli"
+description = "Headless runner: netlist in, CSV or JSON out"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "electrocraft-cli"
+path = "src/main.rs"
+
+[dependencies]
+ecs-sim.workspace = true
+ecs-spice.workspace = true

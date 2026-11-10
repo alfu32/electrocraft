@@ -1,0 +1,13 @@
+[package]
+name = "ecs-schematic"
+description = "Schematic document, symbols, editing commands, undo/redo and netlist extraction"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ecs-units.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true

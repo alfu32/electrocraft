@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+app_root=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+export PATH="$app_root/usr/bin:$PATH"
+exec "$app_root/usr/bin/electrocraft" "$@"

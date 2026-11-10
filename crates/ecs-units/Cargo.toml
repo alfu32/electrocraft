@@ -1,0 +1,10 @@
+[package]
+name = "ecs-units"
+description = "SI units and engineering notation (4k7, 100n, 2.2M)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+thiserror.workspace = true

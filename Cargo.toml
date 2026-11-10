@@ -1,0 +1,60 @@
+[workspace]
+members = [
+    "crates/ecs-units",
+    "crates/ecs-expr",
+    "crates/ecs-model",
+    "crates/ecs-sim",
+    "crates/ecs-lib",
+    "crates/ecs-script",
+    "crates/ecs-spice",
+    "crates/ecs-schematic",
+    "crates/ecs-render",
+    "crates/ecs-app",
+    "crates/ecs-cli",
+    "crates/datasheet-tool",
+]
+default-members = ["crates/ecs-app"]
+resolver = "3"
+
+[workspace.package]
+edition = "2024"
+license = "MIT OR Apache-2.0"
+rust-version = "1.95"
+version = "0.1.0"
+repository = "https://github.com/alfu32/electrocraft"
+
+[workspace.dependencies]
+ecs-units = { path = "crates/ecs-units" }
+ecs-expr = { path = "crates/ecs-expr" }
+ecs-model = { path = "crates/ecs-model" }
+ecs-sim = { path = "crates/ecs-sim" }
+ecs-lib = { path = "crates/ecs-lib" }
+ecs-script = { path = "crates/ecs-script" }
+ecs-spice = { path = "crates/ecs-spice" }
+ecs-schematic = { path = "crates/ecs-schematic" }
+ecs-render = { path = "crates/ecs-render" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+crossbeam-channel = "0.5"
+triple_buffer = "8"
+rtrb = "0.3"
+# D4: never WGPU. eframe is used with the glow (OpenGL) backend only.
+eframe = { version = "=0.37.0", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11", "persistence"] }
+egui = { version = "=0.37.0", default-features = false, features = ["default_fonts"] }
+raylib = { version = "=6.0.0" }
+rfd = { version = "=0.17.2", default-features = false, features = ["xdg-portal"] }
+proptest = "1"
+egui_plot = { version = "=0.38.0", default-features = false }
+rquickjs = { version = "=0.14.0" }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+lto = "thin"
+codegen-units = 4

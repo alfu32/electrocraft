@@ -1,0 +1,17 @@
+[package]
+name = "ecs-script"
+description = "JavaScript component host (QuickJS). Phase P6 stub."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ecs-model.workspace = true
+ecs-expr.workspace = true
+rquickjs.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+ecs-lib.workspace = true
+ecs-sim.workspace = true

@@ -1,0 +1,111 @@
+# Manual release at an existing version tag (no `v` prefix, equal to the
+# literal version in crates/ecs-app/Cargo.toml), following Meshcraft:
+#   gh workflow run release.yaml --ref X.Y.Z
+# Produces AppGlider-friendly AppImages (electrocraft-X.Y.Z-linux-<arch>.AppImage
+# + .zsync), portable archives and checksums, then publishes one release.
+name: Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          version=$(python3 -c 'import sys; sys.path.insert(0, "scripts/release"); import common; print(common.app_version())')
+          test "$GITHUB_REF_TYPE" = tag || { echo "run this workflow on a tag"; exit 1; }
+          test "$GITHUB_REF_NAME" = "$version" || { echo "tag $GITHUB_REF_NAME != app version $version"; exit 1; }
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+  validate:
+    needs: tag
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake clang libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libwayland-dev libxkbcommon-dev ngspice
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+          components: rustfmt, clippy
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - run: python3 -m unittest discover -s scripts/release -p 'test_*.py' -v
+
+  linux:
+    needs: tag
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { arch: x86_64, runner: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
+          - { arch: aarch64, runner: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Native dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake clang libx11-dev libxrandr-dev libxinerama-dev libxcursor-dev libxi-dev libgl1-mesa-dev libwayland-dev libxkbcommon-dev zsync
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+      - run: cargo build --release --locked -p ecs-app -p ecs-cli -p datasheet-tool
+      - run: python3 scripts/release/appimage.py --arch ${{ matrix.arch }}
+      - run: python3 scripts/release/portable.py --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-${{ matrix.arch }}
+          path: dist/*
+
+  desktop:
+    needs: tag
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { runner: windows-2022, target: x86_64-pc-windows-msvc }
+          - { runner: macos-14, target: aarch64-apple-darwin }
+          - { runner: macos-13, target: x86_64-apple-darwin }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: "1.99.1"
+      - run: cargo build --release --locked -p ecs-app -p ecs-cli -p datasheet-tool
+      - run: python3 scripts/release/portable.py --target ${{ matrix.target }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-${{ matrix.target }}
+          path: dist/*
+
+  publish:
+    needs: [tag, validate, linux, desktop]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: cd dist && sha256sum $(ls | grep -v '\.sha256$') > SHA256SUMS.txt
+      - name: Publish (one AppImage per architecture, marked latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.tag.outputs.version }}
+        run: |
+          gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && { echo "release $VERSION exists"; exit 1; }
+          gh release create "$VERSION" dist/* --repo "$GITHUB_REPOSITORY" --title "Electrocraft $VERSION" --latest \
+            --notes "Electrocraft $VERSION. AppImages: electrocraft-$VERSION-linux-<arch>.AppImage (AppGlider and AppImageUpdate compatible). Portable archives for Linux, Windows and macOS."
