@@ -106,6 +106,14 @@ pub enum Cmd {
     TogglePanel(&'static str),
     DcOp,
     ClearProbes,
+    /// Show the document in tab k.
+    SwitchTab(usize),
+    /// Close a tab (the active one when None), asking to save changes.
+    CloseTab(Option<usize>),
+    /// Show the next tab.
+    NextTab,
+    /// Save every modified document.
+    SaveAll,
     /// Add a scope channel: a formula over net and part codes.
     ScopeAdd {
         name: String,
@@ -158,8 +166,52 @@ pub enum Cmd {
     DatasheetTool,
 }
 
+/// A document open in a tab. The active tab's state lives in [`App`]'s own
+/// fields; the others wait here (their simulation is paused, and restarts
+/// from its operating point when the tab is shown again).
+#[derive(Default)]
+pub struct DocTab {
+    pub doc: Schematic,
+    pub history: History,
+    pub path: Option<PathBuf>,
+    pub dirty: bool,
+    pub selection: BTreeSet<Item>,
+    pub vp: Viewport,
+    pub stack: Vec<crate::component_ui::Frame>,
+    pub scope: crate::scope::Scope,
+    pub sim_running: bool,
+    /// Fit-to-view frames still due when the tab was left.
+    pub fit_frames: u8,
+}
+
+impl DocTab {
+    /// Tab caption.
+    pub fn title(&self) -> String {
+        let root = self.stack.first().map_or(&self.doc, |f| &f.doc);
+        match self
+            .stack
+            .first()
+            .map_or(self.path.as_ref(), |f| f.path.as_ref())
+        {
+            Some(p) => p
+                .file_stem()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_default(),
+            None => root.metadata.title.clone(),
+        }
+    }
+    pub fn modified(&self) -> bool {
+        self.dirty || self.stack.iter().any(|f| f.dirty)
+    }
+}
+
 pub struct App {
     pub cat: Catalog,
+    /// Open documents; `tabs[active]` is a placeholder for the one in use.
+    pub tabs: Vec<DocTab>,
+    pub active: usize,
+    /// A tab waiting for "Save changes?" before it closes.
+    pub confirm_tab: Option<usize>,
     pub doc: Schematic,
     pub history: History,
     pub path: Option<PathBuf>,
@@ -252,6 +304,9 @@ impl App {
             .unwrap_or_default();
         let mut app = Self {
             cat: Catalog::builtin(),
+            tabs: Vec::new(),
+            active: 0,
+            confirm_tab: None,
             doc: Schematic::default(),
             history: History::default(),
             path: None,
@@ -345,19 +400,213 @@ impl App {
     }
 
     pub fn title(&self) -> String {
-        match &self.path {
+        match self
+            .stack
+            .first()
+            .map_or(self.path.as_ref(), |f| f.path.as_ref())
+        {
             Some(p) => p
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default(),
-            None => self.doc.metadata.title.clone(),
+            None => self.root_doc().metadata.title.clone(),
         }
+    }
+
+    /// Whether the active document (or a schematic it encloses) has unsaved changes.
+    pub fn modified(&self) -> bool {
+        self.dirty || self.stack.iter().any(|f| f.dirty)
+    }
+
+    /// Caption and modified flag of tab `k`.
+    pub fn tab_info(&self, k: usize) -> (String, bool) {
+        if k == self.active {
+            (self.title(), self.modified())
+        } else {
+            (self.tabs[k].title(), self.tabs[k].modified())
+        }
+    }
+
+    /// File of tab `k`, if saved.
+    pub fn tab_path(&self, k: usize) -> Option<PathBuf> {
+        if k == self.active {
+            self.stack
+                .first()
+                .map_or(self.path.clone(), |f| f.path.clone())
+        } else {
+            let t = &self.tabs[k];
+            t.stack.first().map_or(t.path.clone(), |f| f.path.clone())
+        }
+    }
+
+    /// Any open document with unsaved changes.
+    pub fn any_modified(&self) -> bool {
+        self.has_doc && (0..self.tabs.len()).any(|k| self.tab_info(k).1)
+    }
+
+    /// Move the active document out of the working fields.
+    fn take_active(&mut self) -> DocTab {
+        self.comp_editor = None;
+        // The simulation thread counts probe lists globally: keep the counter.
+        let generation = self.scope.generation;
+        let tab = DocTab {
+            doc: std::mem::take(&mut self.doc),
+            history: std::mem::take(&mut self.history),
+            path: self.path.take(),
+            dirty: self.dirty,
+            selection: std::mem::take(&mut self.selection),
+            vp: self.vp,
+            stack: std::mem::take(&mut self.stack),
+            scope: std::mem::take(&mut self.scope),
+            sim_running: self.sim_running,
+            fit_frames: if self.fit_pending {
+                self.fit_frames.max(1)
+            } else {
+                0
+            },
+        };
+        self.scope.generation = generation;
+        tab
+    }
+
+    /// Make a stored document the working one and restart its simulation.
+    fn put_active(&mut self, t: DocTab) {
+        self.doc = t.doc;
+        self.history = t.history;
+        self.path = t.path;
+        self.dirty = t.dirty;
+        self.selection = t.selection;
+        self.vp = t.vp;
+        self.fit_pending = t.fit_frames > 0;
+        self.fit_frames = t.fit_frames;
+        self.stack = t.stack;
+        let generation = self.scope.generation;
+        self.scope = t.scope;
+        self.scope.generation = generation;
+        // The simulation thread starts over: resend the scope signals.
+        self.scope.signals.clear();
+        self.scope.samples.clear();
+        self.scope.frozen.clear();
+        self.tool = Tool::Select;
+        self.gesture = Gesture::None;
+        self.wire_pts.clear();
+        self.hover = None;
+        self.annotate = None;
+        self.inspector_edit.clear();
+        self.home = false;
+        self.has_doc = true;
+        self.rev += 1;
+        let sim = self.root_doc().simulation.clone();
+        self.sim.send(SimCmd::SetSpeed(sim.speed));
+        self.sim.send(SimCmd::SetTimeStep(sim.time_step));
+        self.sync_sim(true);
+        self.sim.send(if t.sim_running {
+            SimCmd::Run
+        } else {
+            SimCmd::Pause
+        });
+        self.sim_running = t.sim_running;
+    }
+
+    /// Show tab `k`.
+    pub fn switch_tab(&mut self, k: usize) {
+        if !self.has_doc || k >= self.tabs.len() {
+            return;
+        }
+        if k == self.active {
+            self.home = false;
+            return;
+        }
+        let cur = self.take_active();
+        self.tabs[self.active] = cur;
+        let next = std::mem::take(&mut self.tabs[k]);
+        self.active = k;
+        self.put_active(next);
+    }
+
+    /// Make room for a new document in a new tab (the caller loads it).
+    fn new_tab(&mut self) {
+        if self.has_doc {
+            let cur = self.take_active();
+            self.tabs[self.active] = cur;
+            self.tabs.push(DocTab::default());
+            self.active = self.tabs.len() - 1;
+        } else {
+            self.tabs = vec![DocTab::default()];
+            self.active = 0;
+        }
+    }
+
+    /// Close tab `k`, asking first when it has unsaved changes (unless `force`).
+    pub fn close_tab(&mut self, k: usize, force: bool) {
+        if !self.has_doc || k >= self.tabs.len() {
+            return;
+        }
+        if !force && self.tab_info(k).1 {
+            self.confirm_tab = Some(k);
+            return;
+        }
+        if k != self.active {
+            self.tabs.remove(k);
+            if k < self.active {
+                self.active -= 1;
+            }
+            return;
+        }
+        drop(self.take_active());
+        self.tabs.remove(k);
+        if self.tabs.is_empty() {
+            self.has_doc = false;
+            self.home = true;
+            self.active = 0;
+            self.dirty = false;
+            self.sim.send(SimCmd::Pause);
+            self.sim_running = false;
+            self.sim.send(SimCmd::Rebuild {
+                netlist: Default::default(),
+                generation: self.rev + 1,
+            });
+            self.rev += 1;
+            return;
+        }
+        self.active = k.min(self.tabs.len() - 1);
+        let next = std::mem::take(&mut self.tabs[self.active]);
+        self.put_active(next);
+    }
+
+    /// Tab already showing this file, if any.
+    fn tab_with_path(&self, p: &std::path::Path) -> Option<usize> {
+        let same = |q: &Option<PathBuf>| {
+            q.as_deref()
+                .is_some_and(|q| q == p || q.canonicalize().ok() == p.canonicalize().ok())
+        };
+        (0..self.tabs.len()).find(|&k| {
+            if k == self.active {
+                same(
+                    &self
+                        .stack
+                        .first()
+                        .map_or(self.path.clone(), |f| f.path.clone()),
+                )
+            } else {
+                same(
+                    &self.tabs[k]
+                        .stack
+                        .first()
+                        .map_or(self.tabs[k].path.clone(), |f| f.path.clone()),
+                )
+            }
+        })
     }
 
     fn remember(&mut self, path: &std::path::Path) {
         self.recent.retain(|p| p != path);
         self.recent.insert(0, path.to_path_buf());
         self.recent.truncate(8);
+        // Tests must not touch the user's recent files.
+        if cfg!(test) {
+            return;
+        }
         if let Some(d) = config_dir() {
             let _ = std::fs::create_dir_all(&d);
             let _ = std::fs::write(
@@ -367,8 +616,9 @@ impl App {
         }
     }
 
-    /// Replace the document and start simulating it.
+    /// Open a document in a new tab and start simulating it.
     pub fn load_doc(&mut self, doc: Schematic, path: Option<PathBuf>) {
+        self.new_tab();
         self.stack.clear();
         self.comp_editor = None;
         self.doc = doc;
@@ -688,6 +938,12 @@ impl App {
                     self.run(Cmd::OpenPath(p), ctx);
                 }
             }
+            Cmd::OpenPath(p) if self.has_doc && self.tab_with_path(&p).is_some() => {
+                if let Some(k) = self.tab_with_path(&p) {
+                    self.switch_tab(k);
+                    self.status = format!("{} is already open", p.display());
+                }
+            }
             Cmd::OpenPath(p) => match std::fs::read_to_string(&p)
                 .map_err(|e| e.to_string())
                 .and_then(|t| Schematic::from_json(&t).map_err(|e| e.to_string()))
@@ -702,6 +958,21 @@ impl App {
                 if let Some(s) = crate::samples::all().into_iter().find(|s| s.id == id) {
                     let doc = (s.build)(&self.cat);
                     self.load_doc(doc, None);
+                }
+            }
+            Cmd::SwitchTab(k) => self.switch_tab(k),
+            Cmd::CloseTab(k) => self.close_tab(k.unwrap_or(self.active), false),
+            Cmd::NextTab => {
+                if self.has_doc && !self.tabs.is_empty() {
+                    self.switch_tab((self.active + 1) % self.tabs.len());
+                }
+            }
+            Cmd::SaveAll => {
+                for k in 0..self.tabs.len() {
+                    if self.tab_info(k).1 {
+                        self.switch_tab(k);
+                        self.run(Cmd::Save, ctx);
+                    }
                 }
             }
             Cmd::Save => match self
@@ -1096,6 +1367,8 @@ impl App {
             take(m, Key::O, Cmd::Open, &mut cmds);
             take(ms, Key::S, Cmd::SaveAs, &mut cmds);
             take(m, Key::S, Cmd::Save, &mut cmds);
+            take(m, Key::W, Cmd::CloseTab(None), &mut cmds);
+            take(m, Key::Tab, Cmd::NextTab, &mut cmds);
             if typing {
                 return;
             }
@@ -1167,7 +1440,13 @@ impl App {
             if self.home
                 && !matches!(
                     c,
-                    Cmd::New | Cmd::Open | Cmd::Palette | Cmd::Save | Cmd::SaveAs
+                    Cmd::New
+                        | Cmd::Open
+                        | Cmd::Palette
+                        | Cmd::Save
+                        | Cmd::SaveAs
+                        | Cmd::CloseTab(_)
+                        | Cmd::NextTab
                 )
             {
                 continue;
@@ -1811,5 +2090,71 @@ impl App {
         if let Some(cmd) = chosen {
             self.run(cmd, ctx);
         }
+    }
+}
+
+#[cfg(test)]
+mod tab_tests {
+    use super::*;
+
+    fn sample(app: &App, id: &str) -> Schematic {
+        let s = crate::samples::all()
+            .into_iter()
+            .find(|s| s.id == id)
+            .unwrap();
+        (s.build)(&app.cat)
+    }
+
+    #[test]
+    fn documents_open_in_tabs() {
+        let ctx = egui::Context::default();
+        let mut app = App::new(true);
+        let a = sample(&app, "astable");
+        app.load_doc(a, None);
+        let b = sample(&app, "rc-lowpass");
+        app.load_doc(b, None);
+        assert_eq!((app.tabs.len(), app.active), (2, 1));
+        assert_eq!(app.title(), "RC Low-pass");
+        assert_eq!(app.tab_info(0).0, "Astable Multivibrator");
+        // Edit the second, switch away and back: edits and undo history stay.
+        let n = app.doc.parts.len();
+        let first = app.doc.parts[0].id;
+        app.edit(Command::Delete([Item::Part(first)].into()));
+        app.switch_tab(0);
+        assert_eq!(app.title(), "Astable Multivibrator");
+        assert!(!app.modified() && app.tab_info(1).1);
+        app.switch_tab(1);
+        assert_eq!(app.doc.parts.len(), n - 1);
+        app.run(Cmd::Undo, &ctx);
+        assert_eq!(app.doc.parts.len(), n);
+        // The + menu's New opens a third tab.
+        app.run(Cmd::New, &ctx);
+        assert_eq!((app.tabs.len(), app.active), (3, 2));
+        // Closing a modified tab asks first.
+        app.switch_tab(1);
+        app.edit(Command::Delete([Item::Part(first)].into()));
+        app.close_tab(1, false);
+        assert_eq!(app.confirm_tab, Some(1));
+        assert_eq!(app.tabs.len(), 3);
+        app.confirm_tab = None;
+        app.close_tab(1, true);
+        assert_eq!(app.tabs.len(), 2);
+        assert_eq!(app.title(), "Untitled");
+        // A file that is already open is switched to, not opened twice.
+        let dir = std::env::temp_dir().join(format!("ecs-tabs-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("divider.ecs");
+        std::fs::write(&path, sample(&app, "divider").to_json()).unwrap();
+        app.run(Cmd::OpenPath(path.clone()), &ctx);
+        assert_eq!(app.tabs.len(), 3);
+        app.switch_tab(0);
+        app.run(Cmd::OpenPath(path.clone()), &ctx);
+        assert_eq!((app.tabs.len(), app.active), (3, 2));
+        std::fs::remove_dir_all(&dir).ok();
+        // Closing every tab returns to the Start screen.
+        for _ in 0..3 {
+            app.close_tab(app.active, true);
+        }
+        assert!(!app.has_doc && app.home && app.tabs.is_empty());
     }
 }

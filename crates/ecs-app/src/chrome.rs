@@ -203,46 +203,93 @@ impl App {
                         Stroke::new(1.0, c::PANEL_BORDER),
                     );
                     if self.has_doc {
-                        let title =
-                            format!("{}{}", self.title(), if self.dirty { " •" } else { "" });
-                        let galley = ui
-                            .painter()
-                            .layout_no_wrap(title, theme::bold(13.0), c::TEXT);
-                        let (rect, resp) = ui.allocate_exact_size(
-                            vec2(galley.size().x + 40.0, 26.0),
-                            Sense::click(),
-                        );
-                        ui.painter().rect_filled(
-                            rect,
-                            5.0,
-                            if self.home { c::BAR } else { c::TAB },
-                        );
-                        ui.painter().galley(
-                            rect.left_center() + vec2(10.0, -galley.size().y / 2.0),
-                            galley,
-                            c::TEXT,
-                        );
-                        let x = Rect::from_center_size(
-                            rect.right_center() - vec2(14.0, 0.0),
-                            vec2(14.0, 14.0),
-                        );
-                        icons::paint(ui.painter(), x, Icon::Close, c::TEXT_DIM, true);
-                        if resp.clicked() {
-                            if ui
-                                .ctx()
-                                .input(|i| i.pointer.interact_pos())
-                                .is_some_and(|p| x.expand(4.0).contains(p))
-                            {
-                                self.has_doc = false;
-                                self.home = true;
+                        // One tab per open document; long lists shrink the captions.
+                        let n = self.tabs.len().max(1);
+                        let room = (ui.available_width() - 220.0).max(120.0);
+                        let max_label = (room / n as f32 - 44.0).clamp(40.0, 220.0);
+                        for k in 0..self.tabs.len() {
+                            let (name, modified) = self.tab_info(k);
+                            let active = k == self.active && !self.home;
+                            let title = format!("{name}{}", if modified { " •" } else { "" });
+                            let font = if k == self.active {
+                                theme::bold(13.0)
                             } else {
-                                self.home = false;
+                                theme::regular(13.0)
+                            };
+                            let galley = ui.painter().layout(
+                                title.clone(),
+                                font,
+                                if active { c::TEXT } else { c::TEXT_DIM },
+                                f32::INFINITY,
+                            );
+                            let w = galley.size().x.min(max_label);
+                            let (rect, resp) =
+                                ui.allocate_exact_size(vec2(w + 40.0, 26.0), Sense::click());
+                            let hovered = resp.hovered();
+                            ui.painter().rect_filled(
+                                rect,
+                                5.0,
+                                if active {
+                                    c::TAB
+                                } else if hovered {
+                                    c::HOVER
+                                } else {
+                                    c::BAR
+                                },
+                            );
+                            if active {
+                                ui.painter().line_segment(
+                                    [
+                                        rect.left_bottom() + vec2(6.0, -1.0),
+                                        rect.right_bottom() + vec2(-6.0, -1.0),
+                                    ],
+                                    Stroke::new(2.0, c::ACCENT),
+                                );
+                            }
+                            let text_rect = Rect::from_min_size(
+                                rect.min + vec2(10.0, 0.0),
+                                vec2(w, rect.height()),
+                            );
+                            ui.painter().with_clip_rect(text_rect).galley(
+                                rect.left_center() + vec2(10.0, -galley.size().y / 2.0),
+                                galley,
+                                c::TEXT,
+                            );
+                            let x = Rect::from_center_size(
+                                rect.right_center() - vec2(14.0, 0.0),
+                                vec2(14.0, 14.0),
+                            );
+                            let over_x = ui
+                                .ctx()
+                                .input(|i| i.pointer.hover_pos())
+                                .is_some_and(|p| x.expand(4.0).contains(p));
+                            if over_x {
+                                ui.painter().rect_filled(x.expand(3.0), 3.0, c::HOVER);
+                            }
+                            icons::paint(
+                                ui.painter(),
+                                x,
+                                Icon::Close,
+                                if over_x { c::TEXT } else { c::TEXT_DIM },
+                                true,
+                            );
+                            let resp = resp.on_hover_text(match self.tab_path(k) {
+                                Some(p) => p.display().to_string(),
+                                None => format!("{name} (not saved yet)"),
+                            });
+                            if resp.clicked() {
+                                cmd = Some(if over_x {
+                                    Cmd::CloseTab(Some(k))
+                                } else {
+                                    Cmd::SwitchTab(k)
+                                });
+                            }
+                            if resp.middle_clicked() {
+                                cmd = Some(Cmd::CloseTab(Some(k)));
                             }
                         }
                     }
-                    if icon_button(ui, Icon::Plus, 24.0, "New schematic (Ctrl+N)", true, false) {
-                        cmd = Some(Cmd::New);
-                    }
+                    self.plus_menu(ui, &mut cmd);
                     ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
                         ui.spacing_mut().item_spacing.x = 2.0;
                         if icon_button(ui, Icon::Close, 30.0, "", true, false) {
@@ -285,6 +332,53 @@ impl App {
         cmd
     }
 
+    /// "+" after the tabs: a new schematic, a file or a sample, each in a new tab.
+    fn plus_menu(&mut self, ui: &mut Ui, cmd: &mut Option<Cmd>) {
+        let recent = self.recent.clone();
+        let btn = egui::Button::new(RichText::new("+").font(theme::bold(17.0)).color(c::TEXT))
+            .fill(Color32::TRANSPARENT)
+            .min_size(vec2(26.0, 24.0));
+        let (resp, _) = egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
+            ui.set_min_width(250.0);
+            ui.label(
+                RichText::new("Open in a new tab")
+                    .color(c::TEXT_FAINT)
+                    .small(),
+            );
+            if menu_item(ui, "New Schematic", "Ctrl+N") {
+                *cmd = Some(Cmd::New);
+                ui.close();
+            }
+            if menu_item(ui, "Open File...", "Ctrl+O") {
+                *cmd = Some(Cmd::Open);
+                ui.close();
+            }
+            if !recent.is_empty() {
+                ui.separator();
+                ui.label(RichText::new("Recent").color(c::TEXT_FAINT).small());
+                for p in recent.iter().take(6) {
+                    let name = p
+                        .file_name()
+                        .map(|s| s.to_string_lossy().to_string())
+                        .unwrap_or_default();
+                    if menu_item(ui, &name, "") {
+                        *cmd = Some(Cmd::OpenPath(p.clone()));
+                        ui.close();
+                    }
+                }
+            }
+            ui.separator();
+            ui.label(RichText::new("Samples").color(c::TEXT_FAINT).small());
+            for smp in crate::samples::all() {
+                if menu_item(ui, smp.title, "") {
+                    *cmd = Some(Cmd::OpenSample(smp.id));
+                    ui.close();
+                }
+            }
+        });
+        resp.on_hover_text("New tab: a new schematic, a file or a sample");
+    }
+
     fn file_menu(&mut self, ui: &mut Ui, cmd: &mut Option<Cmd>) {
         let has_doc = self.has_doc;
         let recent = self.recent.clone();
@@ -292,11 +386,13 @@ impl App {
             egui::Button::new(RichText::new("File").color(c::TEXT)).fill(Color32::TRANSPARENT);
         egui::containers::menu::MenuButton::from_button(btn).ui(ui, |ui| {
             ui.set_min_width(250.0);
-            let items: [(&str, &str, Cmd, bool); 4] = [
+            let items: [(&str, &str, Cmd, bool); 6] = [
                 ("New Schematic", "Ctrl+N", Cmd::New, true),
                 ("Open...", "Ctrl+O", Cmd::Open, true),
                 ("Save", "Ctrl+S", Cmd::Save, has_doc),
                 ("Save As...", "Ctrl+Shift+S", Cmd::SaveAs, has_doc),
+                ("Save All", "", Cmd::SaveAll, has_doc && self.tabs.len() > 1),
+                ("Close Tab", "Ctrl+W", Cmd::CloseTab(None), has_doc),
             ];
             for (label, key, c2, en) in items {
                 ui.add_enabled_ui(en, |ui| {

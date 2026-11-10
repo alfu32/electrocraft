@@ -58,11 +58,7 @@ impl eframe::App for Shell {
             self.status_seen.clear();
         }
         // Unsaved changes guard.
-        if ctx.input(|i| i.viewport().close_requested())
-            && app.dirty
-            && app.has_doc
-            && !app.allow_close
-        {
+        if ctx.input(|i| i.viewport().close_requested()) && app.any_modified() && !app.allow_close {
             ctx.send_viewport_cmd(egui::ViewportCommand::CancelClose);
             app.confirm_close = true;
         }
@@ -98,18 +94,24 @@ impl eframe::App for Shell {
             app.rev += 1;
         }
         if app.confirm_close {
+            let names: Vec<String> = (0..app.tabs.len())
+                .filter_map(|k| {
+                    let (name, modified) = app.tab_info(k);
+                    modified.then_some(name)
+                })
+                .collect();
             egui::Window::new("Save changes?")
                 .collapsible(false)
                 .resizable(false)
                 .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
                 .show(&ctx, |ui| {
-                    ui.label(format!("{} has unsaved changes.", app.title()));
+                    ui.label(format!("Unsaved changes in {}.", names.join(", ")));
                     ui.horizontal(|ui| {
-                        if ui.button("Save").clicked() {
+                        if ui.button("Save All").clicked() {
+                            // Quits once everything is saved; a cancelled Save As keeps the app open.
                             app.confirm_close = false;
-                            cmds.push(Cmd::Save);
+                            cmds.push(Cmd::SaveAll);
                             cmds.push(Cmd::Quit);
-                            app.allow_close = true;
                         }
                         if ui.button("Discard").clicked() {
                             app.allow_close = true;
@@ -117,6 +119,37 @@ impl eframe::App for Shell {
                         }
                         if ui.button("Cancel").clicked() {
                             app.confirm_close = false;
+                        }
+                    });
+                });
+        }
+        if let Some(k) = app.confirm_tab {
+            let name = if k < app.tabs.len() {
+                app.tab_info(k).0
+            } else {
+                String::new()
+            };
+            egui::Window::new("Close tab?")
+                .collapsible(false)
+                .resizable(false)
+                .anchor(egui::Align2::CENTER_CENTER, egui::vec2(0.0, 0.0))
+                .show(&ctx, |ui| {
+                    ui.label(format!("{name} has unsaved changes."));
+                    ui.horizontal(|ui| {
+                        if ui.button("Save").clicked() {
+                            app.confirm_tab = None;
+                            app.switch_tab(k);
+                            app.run(Cmd::Save, &ctx);
+                            if !app.modified() {
+                                app.close_tab(app.active, true);
+                            }
+                        }
+                        if ui.button("Discard").clicked() {
+                            app.confirm_tab = None;
+                            app.close_tab(k, true);
+                        }
+                        if ui.button("Cancel").clicked() {
+                            app.confirm_tab = None;
                         }
                     });
                 });

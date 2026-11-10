@@ -35,6 +35,22 @@ pub fn catalog() -> Vec<Info> {
             json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | divider"}),
         ),
         info("file.save", "Save", none.clone()),
+        info(
+            "file.save_all",
+            "Save every modified document",
+            none.clone(),
+        ),
+        info(
+            "file.close",
+            "Close a tab (the active one without index); asks to save changes",
+            json!({"index": "optional tab number, from 0"}),
+        ),
+        info(
+            "file.switch_tab",
+            "Show a tab",
+            json!({"index": "tab number, from 0"}),
+        ),
+        info("file.next_tab", "Show the next tab", none.clone()),
         info("file.save_as", "Save as… (dialog)", none.clone()),
         info(
             "file.import_spice",
@@ -203,6 +219,12 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             Cmd::OpenSample(sample.id)
         }
         "file.save" => Cmd::Save,
+        "file.save_all" => Cmd::SaveAll,
+        "file.close" => Cmd::CloseTab(args["index"].as_u64().map(|k| k as usize)),
+        "file.switch_tab" => {
+            Cmd::SwitchTab(args["index"].as_u64().ok_or("missing tab index")? as usize)
+        }
+        "file.next_tab" => Cmd::NextTab,
         "file.save_as" => Cmd::SaveAs,
         "file.import_spice" => Cmd::ImportSpice,
         "file.export_spice" => Cmd::ExportSpice,
@@ -317,7 +339,7 @@ mod tests {
         let mut ids = std::collections::BTreeSet::new();
         for i in catalog() {
             assert!(ids.insert(i.id), "duplicate id {}", i.id);
-            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I"});
+            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0});
             let args = if i.id == "sim.control" {
                 json!({"refdes": "S1", "state": "closed", "value": 1.0})
             } else {

@@ -186,6 +186,13 @@ def main():
         s.shot("27-scope-formula-suggestions.png", wait=0.6)
         s.close()
 
+        # Documents in tabs; + opens another one in a new tab.
+        s = run("--sample", "astable", commands=[{"id": "file.open_sample", "args": {"id": "rc-lowpass"}},
+                                                  {"id": "file.open_sample", "args": {"id": "counter"}}])
+        s.x("mousemove", 770, 17, "click", 1)
+        s.shot("28-document-tabs.png", wait=2.0)
+        s.close()
+
         s = run("--sample", "rc-lowpass", commands=[{"id": "analysis.run", "args": {"kind": "ac"}}])
         s.shot("17-analysis-ac-bode.png", wait=3.0)
         s.close()
