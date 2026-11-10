@@ -69,9 +69,10 @@ if (-not [string]::IsNullOrWhiteSpace($env:ELECTROCRAFT_PFX_B64) -and -not [stri
       Add-AppxPackage -Path $Msix -ErrorAction Stop
       $Installed = Get-AppxPackage -Name $Identity.identityName
       if (-not $Installed -or $Installed.PackageFamilyName -cne $Identity.packageFamilyName) { throw 'Installed MSIX identity mismatch' }
-      # electrocraft.exe is a GUI-subsystem program: capture its output through files.
+      # electrocraft.exe is a GUI-subsystem program: capture its output through files. The payload is
+      # run from the stage folder: the install folder under WindowsApps denies direct launches.
       $OutFile = Join-Path $env:RUNNER_TEMP 'electrocraft-version.txt'
-      $Run = Start-Process -FilePath (Join-Path $Installed.InstallLocation 'electrocraft.exe') -ArgumentList '--version' -RedirectStandardOutput $OutFile -Wait -PassThru -NoNewWindow
+      $Run = Start-Process -FilePath (Join-Path $Stage 'electrocraft.exe') -ArgumentList '--version' -RedirectStandardOutput $OutFile -Wait -PassThru -NoNewWindow
       $Out = if (Test-Path $OutFile) { (Get-Content $OutFile -Raw).Trim() } else { '' }
       if ($Out -ne "electrocraft $Version") { throw "Installed MSIX reports '$Out'" }
       Remove-AppxPackage -Package $Installed.PackageFullName
