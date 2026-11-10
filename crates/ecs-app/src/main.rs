@@ -8,6 +8,7 @@ mod analysis_ui;
 mod app;
 mod catalog;
 mod chrome;
+mod code_editor;
 mod commands;
 mod component_ui;
 mod components;

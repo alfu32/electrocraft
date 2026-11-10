@@ -569,7 +569,7 @@ impl App {
         .id(egui::Id::unique("component-editor"))
         .open(&mut open)
         .default_size(vec2(760.0, 560.0))
-        .min_size(vec2(600.0, 440.0))
+        .min_size(vec2(640.0, 560.0))
         .resizable(true)
         .collapsible(false)
         .show(ctx, |ui| {
@@ -590,7 +590,7 @@ impl App {
             ui.separator();
             let footer = 40.0;
             let body = ui.available_height() - footer;
-            ui.allocate_ui(vec2(ui.available_width(), body.max(200.0)), |ui| {
+            ui.allocate_ui(vec2(ui.available_width(), body.max(540.0)), |ui| {
                 match ed.tab {
                     Tab::General => self.comp_general(ui, &mut ed),
                     Tab::Symbol => comp_symbol(ui, &mut ed),
@@ -913,18 +913,35 @@ impl App {
                         let pins: Vec<String> = ed.comp.symbol.pins.iter().map(|p| p.name.clone()).collect();
                         *source = components::template_js(&ed.comp.id, &ed.comp.name, &pins);
                     }
-                    ui.label(RichText::new("component({...}) with pins, params and equations(c): c.current, c.voltage, c.let, c.probe (spec 6).").color(c::TEXT_DIM).small());
+                    ui.label(RichText::new("Equations are plain functions or e`...` templates (spec 6). Ctrl+Space suggests; Tab accepts.").color(c::TEXT_DIM).small());
                 });
+                let pins: Vec<crate::code_editor::Item> = ed
+                    .comp
+                    .symbol
+                    .pins
+                    .iter()
+                    .map(|p| {
+                        crate::code_editor::Item::new(
+                            &p.name,
+                            crate::code_editor::Kind::Pin,
+                            "pin on the symbol",
+                        )
+                    })
+                    .collect();
                 egui::ScrollArea::vertical()
                     .id_salt("js-src")
                     .max_height(ui.available_height() - 4.0)
                     .show(ui, |ui| {
-                        ui.add(
-                            egui::TextEdit::multiline(source)
-                                .code_editor()
-                                .desired_width(f32::INFINITY)
-                                .desired_rows(22)
-                                .font(theme::mono(12.5)),
+                        crate::code_editor::code_editor(
+                            ui,
+                            ("js-editor", &ed.comp.id),
+                            source,
+                            crate::code_editor::Lang::Js,
+                            &pins,
+                            crate::code_editor::Opts {
+                                rows: 22,
+                                ..Default::default()
+                            },
                         );
                     });
             }

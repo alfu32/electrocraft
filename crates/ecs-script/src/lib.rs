@@ -54,6 +54,8 @@ impl std::error::Error for ScriptError {}
 
 const PRELUDE: &str = include_str!("prelude.js");
 
+pub mod jsfn;
+
 static EPOCH: std::sync::OnceLock<Instant> = std::sync::OnceLock::new();
 
 fn now_ns() -> u64 {
@@ -197,8 +199,23 @@ fn s(v: &Value, k: &str) -> String {
         .to_string()
 }
 
-/// Parse an `e` template's text, reporting the template's location.
-fn expr(v: &Value, file: &str) -> Result<ecs_expr::Expr, ScriptError> {
+/// Parse an `e` template's text, or compile a plain function (`jsfn`),
+/// reporting the location in the component file.
+fn expr(v: &Value, file: &str, source: &str) -> Result<ecs_expr::Expr, ScriptError> {
+    if let Some(f) = v.get("fn").and_then(|x| x.as_str()) {
+        let text = jsfn::compile(f, source).map_err(|e| ScriptError {
+            file: file.into(),
+            line: e.line,
+            column: e.column,
+            message: e.message,
+        })?;
+        return ecs_expr::parse(&text).map_err(|e| ScriptError {
+            file: file.into(),
+            line: 0,
+            column: 0,
+            message: format!("compiled function `{text}`: {}", e.message),
+        });
+    }
     let src = v.get("src").and_then(|x| x.as_str()).unwrap_or_default();
     let loc = v.get("loc").and_then(|x| x.as_str()).unwrap_or_default();
     ecs_expr::parse(src).map_err(|e| {
@@ -215,7 +232,6 @@ fn expr(v: &Value, file: &str) -> Result<ecs_expr::Expr, ScriptError> {
     })
 }
 
-/// Load a JavaScript component file into a definition.
 pub fn load_component(source: &str, file: &str) -> Result<ComponentDef, ScriptError> {
     let engine = Engine::new(source, file)?;
     let json = engine.call(
@@ -295,14 +311,15 @@ pub fn load_component(source: &str, file: &str) -> Result<ComponentDef, ScriptEr
             .push(n.as_str().unwrap_or_default().to_string());
     }
     for l in d["lets"].as_array().into_iter().flatten() {
-        def.lets.push((s(l, "name"), expr(&l["expr"], file)?));
+        def.lets
+            .push((s(l, "name"), expr(&l["expr"], file, source)?));
     }
     for b in d["branches"].as_array().into_iter().flatten() {
         let opt = |k: &str| -> Result<Option<ecs_expr::Expr>, ScriptError> {
             if b[k].is_null() {
                 Ok(None)
             } else {
-                expr(&b[k], file).map(Some)
+                expr(&b[k], file, source).map(Some)
             }
         };
         def.branches.push(if b["kind"] == "voltage" {
@@ -310,7 +327,7 @@ pub fn load_component(source: &str, file: &str) -> Result<ComponentDef, ScriptEr
                 name: s(b, "name"),
                 a: s(b, "a"),
                 b: s(b, "b"),
-                v: expr(&b["v"], file)?,
+                v: expr(&b["v"], file, source)?,
                 flux: opt("flux")?,
             }
         } else {
@@ -318,13 +335,13 @@ pub fn load_component(source: &str, file: &str) -> Result<ComponentDef, ScriptEr
                 name: None,
                 a: s(b, "a"),
                 b: s(b, "b"),
-                i: expr(&b["i"], file)?,
+                i: expr(&b["i"], file, source)?,
                 q: opt("q")?,
             }
         });
     }
     for l in d["limits"].as_array().into_iter().flatten() {
-        let ctl = expr(&l["expr"], file)?;
+        let ctl = expr(&l["expr"], file, source)?;
         let ecs_expr::Expr::V(a, Some(b)) = ctl else {
             return Err(fail(
                 "c.limit(\"pn\", e`V(a, b)`): the expression must be a voltage difference".into(),
@@ -334,19 +351,19 @@ pub fn load_component(source: &str, file: &str) -> Result<ComponentDef, ScriptEr
         let vte = if l["vte"].is_null() {
             ecs_expr::parse(if has("N") { "N * vt" } else { "vt" }).unwrap()
         } else {
-            expr(&l["vte"], file)?
+            expr(&l["vte"], file, source)?
         };
         let is = if l["is"].is_null() {
             ecs_expr::parse(if has("Is") { "Is" } else { "1e-14" }).unwrap()
         } else {
-            expr(&l["is"], file)?
+            expr(&l["is"], file, source)?
         };
         def.limits.push(LimitDef::Pn { a, b, vte, is });
     }
     for p in d["probes"].as_array().into_iter().flatten() {
         def.probes.push(ProbeDef {
             name: s(p, "name"),
-            expr: expr(&p["expr"], file)?,
+            expr: expr(&p["expr"], file, source)?,
             unit: s(p, "unit"),
         });
     }
@@ -507,10 +524,14 @@ impl Behavior for JsBehavior {
 }
 
 /// The reference components shipped as JavaScript (spec 6.2).
-pub const REFERENCE: [(&str, &str); 2] = [
+pub const REFERENCE: [(&str, &str); 3] = [
     (
         "simple_diode.js",
         include_str!("../components/simple_diode.js"),
+    ),
+    (
+        "function_diode.js",
+        include_str!("../components/function_diode.js"),
     ),
     ("dff.js", include_str!("../components/dff.js")),
 ];

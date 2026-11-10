@@ -44,12 +44,13 @@ jobs:
   linux:
     needs: tag
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         include:
           - { arch: x86_64, runner: ubuntu-22.04, target: x86_64-unknown-linux-gnu }
           - { arch: aarch64, runner: ubuntu-22.04-arm, target: aarch64-unknown-linux-gnu }
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Native dependencies
@@ -70,13 +71,16 @@ jobs:
   desktop:
     needs: tag
     strategy:
-      fail-fast: true
+      # Every platform reports; publish still needs them all.
+      fail-fast: false
       matrix:
         include:
           - { runner: windows-2022, target: x86_64-pc-windows-msvc }
-          - { runner: macos-14, target: aarch64-apple-darwin }
-          - { runner: macos-13, target: x86_64-apple-darwin }
+          # Same images as Meshcraft's release (macos-13 and macos-14 are retired).
+          - { runner: macos-26, target: aarch64-apple-darwin }
+          - { runner: macos-15-intel, target: x86_64-apple-darwin }
     runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@master

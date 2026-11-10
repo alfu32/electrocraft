@@ -11,7 +11,8 @@ It covers analog and digital parts (gates, flip-flops, counters, a 555, a
 part codes (`out`, `R1.I`, `Q1.C.V * Q1.C.I`; tick them in the inspector, one
 lane per channel, docked or floating), your own components with a drawn symbol
 implemented by a nested schematic or JavaScript (edit any part's component, or
-enter its schematic), DC sweep, transient, AC (Bode) and parameter-step
+enter its schematic; equations as plain JavaScript functions or `e` templates,
+in an editor with highlighting and suggestions), DC sweep, transient, AC (Bode) and parameter-step
 analyses with plots, SPICE model and subcircuit import, and a companion tool
 that fits models to datasheet curves.
 

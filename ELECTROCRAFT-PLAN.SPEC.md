@@ -4,7 +4,7 @@ Nov 9, 2026 · @Asdfghjkar · revised Nov 9, 2026 for look and feel, canvas oper
 
 ![Electrocraft running a transistor multivibrator live](docs/screenshots/02-workspace-astable-live.png)
 
-*Electrocraft 0.1.1: an astable multivibrator running live, with scope channels on Q2's collector and base (`Q2.C.V`, `Q2.B.V`). Wires are coloured by voltage, yellow dots show current, the LEDs glow in proportion to their current. Screenshots in this document are captured from the real application by `scripts/capture_screenshots.py`.*
+*Electrocraft 0.1.2: an astable multivibrator running live, with scope channels on Q2's collector and base (`Q2.C.V`, `Q2.B.V`). Wires are coloured by voltage, yellow dots show current, the LEDs glow in proportion to their current. Screenshots in this document are captured from the real application by `scripts/capture_screenshots.py`.*
 
 ## 1. Overview & goals
 
@@ -139,7 +139,7 @@ The integrator keeps the history of q per component. A component never sees the 
 
 ### 4.3 Nonlinear solving
 
-- **Convergence test:** each node voltage must satisfy |Δv| < reltol·|v| + vntol, and each branch current |Δi| < reltol·|i| + abstol. Defaults: reltol 1e-3, vntol 1 µV, abstol 1 pA. As in SPICE, a **residual test** also accepts an iterate whose KCL error at every node is within reltol of the sum of the device currents meeting there (scaled from the step's converged starting point, so an overshooting iterate cannot loosen its own test). Without it, regenerative edges (multivibrators, latches) stall: the Jacobian is nearly singular along a common-mode direction that carries no current.
+- **Convergence test:** each node voltage must satisfy |Δv| < reltol·|v| + vntol, and each branch current |Δi| < reltol·|i| + abstol. Defaults: reltol 1e-3, vntol 1 µV, abstol 1 pA. As in SPICE, a **residual test** also accepts an iterate whose KCL error at every node is within reltol of the sum of the device currents meeting there (scaled from the step's converged starting point, so an overshooting iterate cannot loosen its own test). Without it, regenerative edges (multivibrators, latches) stall: the Jacobian is nearly singular along a common-mode direction that carries no current. Conversely, an update that only just passes the voltage test (more than a tenth of its tolerance) is accepted only once the new point's own KCL balances: far out on an exponential, Newton walks about one vt per step, which fits reltol·|v| at large voltages long before the currents agree (a 100 V breakdown "converged" at the wrong voltage with 10²³ A before this check; SPICE's device-current test guards the same case). Quadratically converged steps skip the extra evaluation.
 - **Limiting:** components can declare limiting on a controlling voltage (the SPICE `pnjlim` style for junctions, `fetlim` for MOS gates). The engine applies it between iterations to stop exponentials from overflowing.
 - **Gmin:** a tiny conductance (default 1e-12 S) across every nonlinear junction and from every node to ground, so no node floats.
 - **DC operating point fallbacks:** plain Newton first; then gmin stepping (start at 1e-3 S, shrink to the default); then source stepping (ramp all independent sources from 0 to 100%). Report which method succeeded.
@@ -312,6 +312,7 @@ Users write components as JavaScript (ES2020) files, run by the QuickJS engine t
   - In `e` templates, names resolve to parameters, `V(a)`, `V(a, b)`, `I(branch)`, `t`, `temp`, `vt` (thermal voltage at the simulation temperature), state variables, names declared with `c.let`, and the functions of 5.2.
   - `c.current(a, b, i, q)` and `c.voltage(a, b, v, flux)` add branches; `c.node(name)` adds an internal node.
   - `c.let(name, expr)` names a subexpression for reuse in later templates; `c.limit("pn" | "fet", expr)`; `c.probe(name, expr, unit)`.
+  - **Equations as plain functions.** Wherever an expression is expected, a JavaScript function works too: `c.current("A", "K", ({ Is, N }) => Is * (limexp(V("A", "K") / (N * vt)) - 1))`. The function is compiled, not run (`crates/ecs-script/src/jsfn.rs`): its source becomes one expression that the engine differentiates and evaluates natively, exactly like a template, but the code is ordinary JavaScript that editors highlight and check. Parameters of the function name component variables (parameters, states, `c.let` names, `vt`, `temp`, `t`), usually destructured. Inside: `const`/`let` and reassignment, `if`/`else` and `return` (folded into `select`, each branch continuing with the statements after the `if`), `?:`, arithmetic, `**`, `%`, comparisons, `&&`, `||`, `!`, `Math.*` (mapped to the expression functions), the expression functions themselves (`limexp`, `select`, `smoothstep`, `safe_div`…), `V("A", "K")` and `I("L")` with names in quotes, and calls to **helper functions declared at the top of the file**, which are inlined with their arguments. Loops, recursion, objects and other strings are rejected with the file line. The prelude also defines the expression functions as numeric JavaScript so the same helpers can run in hooks; `V` and `I` only have values in equations.
 - Hooks: `onInputs(ctx)`, `onTimer(ctx, tag)`, `onControl(ctx, event)`. `ctx` offers `level(pin)` (0, 1 or "X"), `rising(pin)`, `falling(pin)`, `voltage(pin)`, `state`, `param`, `drive(pin, level, delay)`, `timer(delay, tag)`.
 
 ### 6.2 Examples
@@ -338,6 +339,51 @@ export default component({
   },
 });
 ```
+
+The same diode written with functions (`crates/ecs-script/components/function_diode.js`, shipped as a reference), adding a depletion charge continued linearly above Fc·Vj and a smooth breakdown:
+
+```javascript
+/** Shockley junction current; limexp keeps large forward bias finite. */
+function shockley(vd, Is, N) {
+  return Is * (limexp(vd / (N * vt)) - 1);
+}
+
+/** Depletion charge, continued linearly above Fc·Vj so it never blows up. */
+function depletionCharge(vd, Cj, Vj, M) {
+  const fc = 0.5 * Vj;
+  const v = Math.min(vd, fc);
+  const q = (Cj * Vj) / (1 - M) * (1 - (1 - v / Vj) ** (1 - M));
+  if (vd <= fc) {
+    return q;
+  }
+  const slope = Cj * (1 - fc / Vj) ** -M;
+  return q + slope * (vd - fc);
+}
+
+/** Reverse breakdown: smooth everywhere, so Newton always has a slope. */
+function breakdown(vd, IBV, BV) {
+  return -IBV * limexp(-(vd + BV) / vt);
+}
+
+export default component({
+  id: "user.function_diode",
+  name: "Diode (functions)",
+  pins: ["A", "K"],
+  params: {
+    Is: param(1e-14, "A", "Saturation current"), N: param(1.0),
+    Cj: param(2e-12, "F"), Vj: param(0.7, "V"), M: param(0.5),
+    BV: param(100, "V"), IBV: param(1e-10, "A"),
+  },
+  equations(c) {
+    c.let("Id", ({ Is, N, IBV, BV }) => shockley(V("A", "K"), Is, N) + breakdown(V("A", "K"), IBV, BV));
+    c.current("A", "K", ({ Id }) => Id, ({ Cj, Vj, M }) => depletionCharge(V("A", "K"), Cj, Vj, M));
+    c.limit("pn", () => V("A", "K"));
+    c.probe("P", ({ Id }) => V("A", "K") * Id, "W");
+  },
+});
+```
+
+A test checks that it matches the template diode at every bias, clamps at breakdown and runs a fast transient. New components in the component editor start from a function-style template.
 
 A D flip-flop, purely behavioral:
 
@@ -541,12 +587,15 @@ All actions are `Cmd`s with a stable id and JSON arguments in one registry (`cra
 
 - **Edit Component…** (inspector, context menu, Schematic ▸ Component ▸ Edit, Ctrl+E) opens the prototype of the selected part. A part of a library component gets an editable copy (`local.*`); Apply points this part, or every part of that type, at the copy.
 - **New** opens the editor on a blank two-pin component; Apply arms its placement.
+- **Code editors** (component JavaScript, scope formulas, SPICE import; `crates/ecs-app/src/code_editor.rs`) highlight syntax: keywords, the component API, expression functions, functions and constants the file declares, parameters, pins (also inside `V("…")` strings), numbers, strings and comments, with the inside of `` e`…` `` templates coloured as the expression language. Suggestions pop up while typing and on Ctrl+Space: keywords and API, `c.` equation methods, `ctx.` hook members, `Math.` members, expression functions, declared helpers with their signatures and doc comments, parameters, `c.let` values, states, and pin names inside strings (from the file and the symbol); scope formulas suggest every net and part code with its description. Up/Down choose, Tab or Enter accept, Esc closes; Enter keeps the indentation; a line under the editor shows the signature of the call around the cursor.
 - The editor window has three tabs. *General:* name, prefix, category, description, ports and parameters. *Symbol:* a canvas with a 20-unit pin grid and Select (click, drag, Delete), Line, Rect, Circle, Polyline, Text and Pin tools; **Start from** an existing symbol (replace, or add its drawing), **Box** (a box with the current pins), Clear; the pin list renames and removes pins. *Implementation:* Schematic, External schematic, JavaScript (code editor with Template) or External JavaScript (path with Browse…). **Check** compiles without applying and reports pins, parameters and problems; Apply adds the port labels for new pins to an inner schematic.
 - **Enter** (Ctrl+Enter, inspector, context menu) opens a part's inner schematic on the canvas with a breadcrumb and **Back**. Port labels are created for every pin the first time. The inner schematic simulates on its own while open; Back writes it into the prototype as one undoable edit (an external file is saved instead), and every instance updates. Save while inside writes the outer document with the inner one folded in.
 
 | Component editor: symbol | Inside a component |
 | --- | --- |
 | ![Component editor](docs/screenshots/23-component-editor-symbol.png) | ![Inner schematic](docs/screenshots/24-component-inner-schematic.png) |
+| **JavaScript with highlighting and suggestions** | **Scope formula suggestions** |
+| ![Code editor](docs/screenshots/26-component-code-editor.png) | ![Formula suggestions](docs/screenshots/27-scope-formula-suggestions.png) |
 
 ![Custom component sample](docs/screenshots/25-custom-component-sample.png)
 
@@ -569,7 +618,7 @@ All native files are pretty-printed JSON (serde) with a `format_version` field a
 
 The simulator is checked against math first, then against ngspice. Every phase in section 12 ends with its tests green in CI.
 
-*Implemented in 0.1.0:* autodiff property tests against finite differences, plus folding/CSE against a naive tree walk (`ecs-expr/tests/autodiff.rs`); analytic circuits within 0.1% (divider, Wheatstone, RC charge, RL rise, series RLC ringing period, RC low-pass gain at the corner, diode operating point against bisection) plus an astable multivibrator and loop/floating-node checks (`ecs-sim/tests/analytic.rs`); schematic commands headless (rotation, netlist of a divider, T junctions and crossings, labels, undo/redo, rubber-band wires, rotation keeping connections, window and crossing selection, byte-identical save/load/save); every sample circuit fully connected and simulating, the astable running 30 ms with no convergence flags, the LED lighting when its switch closes; release helpers (AppImage name, update information, desktop keys AppGlider reads). Phases P5 to P8 added: gate truth tables, start-up settling, a D flip-flop dividing a clock, a 555-clocked counter driving a decoder and display at the expected 686 Hz (`ecs-sim/tests/digital.rs`); subcircuit flattening and cross-element currents; AC corner (−3 dB, −45°), DC sweeps (live and recompiled), adaptive transient steady state, parallel parameter step and FFT (`tests/analyses.rs`); the 6.2 examples loading and simulating, sandbox escapes (`eval`, the `Function`, async-function constructors, `require`, `std`, `os`, `fetch`, `setTimeout`), runaway hooks and loads stopped, template errors on the right line (`ecs-script/tests/scripts.rs`); SPICE import of a transistor model against hand analysis, an op-amp subcircuit in an active low-pass against the closed-form Bode response, B and F sources, export round trip, and an ngspice comparison that runs when ngspice is installed (CI installs it) (`ecs-spice/tests/import.rs`); diode and NPN fits from 1N4148 and 2N3904 typicals within 5% and a MOSFET fit (`datasheet-tool`); every definition's pins on its symbol, the counter sample counting, and every registry command building (`ecs-app`). 78 tests in all (0.1.1 added scope code resolution, schematic-defined components and the library-to-JavaScript round trip), plus the release-script unit tests. Not yet: the full ngspice corpus, the convergence torture set, criterion benchmarks, renderer snapshot tests.
+*Implemented in 0.1.0:* autodiff property tests against finite differences, plus folding/CSE against a naive tree walk (`ecs-expr/tests/autodiff.rs`); analytic circuits within 0.1% (divider, Wheatstone, RC charge, RL rise, series RLC ringing period, RC low-pass gain at the corner, diode operating point against bisection) plus an astable multivibrator and loop/floating-node checks (`ecs-sim/tests/analytic.rs`); schematic commands headless (rotation, netlist of a divider, T junctions and crossings, labels, undo/redo, rubber-band wires, rotation keeping connections, window and crossing selection, byte-identical save/load/save); every sample circuit fully connected and simulating, the astable running 30 ms with no convergence flags, the LED lighting when its switch closes; release helpers (AppImage name, update information, desktop keys AppGlider reads). Phases P5 to P8 added: gate truth tables, start-up settling, a D flip-flop dividing a clock, a 555-clocked counter driving a decoder and display at the expected 686 Hz (`ecs-sim/tests/digital.rs`); subcircuit flattening and cross-element currents; AC corner (−3 dB, −45°), DC sweeps (live and recompiled), adaptive transient steady state, parallel parameter step and FFT (`tests/analyses.rs`); the 6.2 examples loading and simulating, sandbox escapes (`eval`, the `Function`, async-function constructors, `require`, `std`, `os`, `fetch`, `setTimeout`), runaway hooks and loads stopped, template errors on the right line (`ecs-script/tests/scripts.rs`); SPICE import of a transistor model against hand analysis, an op-amp subcircuit in an active low-pass against the closed-form Bode response, B and F sources, export round trip, and an ngspice comparison that runs when ngspice is installed (CI installs it) (`ecs-spice/tests/import.rs`); diode and NPN fits from 1N4148 and 2N3904 typicals within 5% and a MOSFET fit (`datasheet-tool`); every definition's pins on its symbol, the counter sample counting, and every registry command building (`ecs-app`). 87 tests in all (0.1.1 added scope code resolution, schematic-defined components and the library-to-JavaScript round trip; 0.1.2 equation functions, the function diode against the template diode, Newton acceptance on exponentials, and the code editor's declarations, completion contexts and highlighting), plus the release-script unit tests. Not yet: the full ngspice corpus, the convergence torture set, criterion benchmarks, renderer snapshot tests.
 
 - **Expression engine:** property tests (`proptest`) comparing autodiff derivatives with finite differences over random expressions and inputs; constant folding and CSE must not change results.
 - **Analytic circuits:** results within 0.1% of closed-form answers: voltage divider, RC charge and discharge, RL, series RLC ringing frequency and damping, RC low-pass corner frequency in AC, Wheatstone bridge.
@@ -601,7 +650,7 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.1** (Nov 10, 2026):
+**Status at 0.1.2** (Nov 10, 2026):
 
 | Phase | Status | Done | Remaining |
 | --- | --- | --- | --- |
@@ -611,7 +660,7 @@ flowchart LR
 | P3 | Mostly done | eframe glow shell (D10), Raylib off-screen canvas on its own thread with read-back timing, ANSI symbols for every built-in, editing (D11), undo/redo, netlist extraction, `.ecs` save/load, samples | Hardware read-back numbers at 1080p/1440p; `.sym.json` files on disk; renderer snapshot tests |
 | P4 | Done | Simulation thread, command channel, triple-buffered snapshots, SPSC scope ring, pacing within a 60% CPU budget, step halving, damped integration, non-fatal failure with markers, live controls, reset; wire colours, current dots, glows, lit segments, hover, problems list; formula scope (D15) with lanes, overlay, floating window, trigger, hold, XY, cursors and inspector checkboxes | Per-channel scale and offset; currents at subcircuit ports |
 | P5 | Done | Event layer, logic families with hysteresis, Thevenin ramped outputs, watches, tri-state, settling; 21 digital and mixed-signal parts; Digital ribbon tab; counter sample | Pure event-domain digital nets (optimization) |
-| P6 | Done | QuickJS host, full 6.1 API, sandbox and limits, per-thread runtimes, hot reload, problems, `.d.ts`, reference components | ES `import` inside packages; a user guide page |
+| P6 | Done | QuickJS host, full 6.1 API, sandbox and limits, per-thread runtimes, hot reload, problems, `.d.ts`, reference components; equations as plain functions compiled to expressions; highlighted code editor with suggestions | ES `import` inside packages; a user guide page |
 | P7 | Done | Analysis dialogs, background jobs with progress and cancel, plot windows (Bode, cursors, FFT, CSV, PNG), DC Op annotation; SPICE import (models, subcircuits, B/E/F/G/H, includes) with symbol and pin mapping into packages; SPICE export | `.ecsr` result files; `.ecspkg` zip packages; linear and octave sweeps |
 | P3+ | Done | Components in a schematic (D16): component editor with symbol drawing, nested and external schematics, inline and external JavaScript, editable copies of library parts, enter/back editing, parameter expressions in subcircuits; custom component sample | Nested prototypes inside inner schematics; symbol arcs and fills in the editor |
 | P8 | Done | `electrocraft-datasheet`: five families, test-bench fitting with Levenberg-Marquardt, curve digitizer, review overlay, JS and report export into the components folder | Op-amp macromodel and regulator families; reading tables from PDFs (Q5) |

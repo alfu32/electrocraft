@@ -111,7 +111,7 @@ impl ImportUi {
                     }
                     ui.label(RichText::new(".model (D, NPN, PNP, NMOS, PMOS, NJF, PJF) and .subckt with R C L V I E F G H B D Q M J X").color(c::TEXT_DIM).small());
                 });
-                ui.add(egui::TextEdit::multiline(&mut self.text).font(theme::mono(11.5)).desired_rows(9).desired_width(f32::INFINITY).hint_text("Paste .model / .subckt text here"));
+                crate::code_editor::code_editor(ui, "spice-import", &mut self.text, crate::code_editor::Lang::Spice, &[], crate::code_editor::Opts { rows: 9, hint: "Paste .model / .subckt text here", ..Default::default() });
                 match &self.parsed {
                     None => {}
                     Some(Err(e)) => {

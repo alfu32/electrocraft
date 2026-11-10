@@ -41,6 +41,76 @@ fn simple_diode_matches_the_builtin() {
 }
 
 #[test]
+fn function_components_match_template_components() {
+    let lib = ecs_lib::library();
+    let run = |d: ecs_model::ComponentDef, v: f64| {
+        let mut n = Netlist::new();
+        n.add(
+            "V1",
+            lib.get("core.vdc").unwrap().clone(),
+            &["in", "0"],
+            &[("V", v)],
+        );
+        n.add(
+            "R1",
+            lib.get("core.resistor").unwrap().clone(),
+            &["in", "a"],
+            &[("R", 1e3)],
+        );
+        n.add("D1", Arc::new(d), &["a", "0"], &[]);
+        let mut c = Circuit::compile(&n).unwrap();
+        c.dc_op().unwrap();
+        let k = c.instance_index("D1").unwrap();
+        (c.voltage("a").unwrap(), c.probes(k)[0])
+    };
+    let f = reference("function_diode.js");
+    assert_eq!(f.id, "user.function_diode");
+    assert_eq!(f.lets.len(), 1);
+    assert!(matches!(f.limits[0], ecs_model::LimitDef::Pn { .. }));
+    for v in [0.3, 2.0, 5.0, -5.0] {
+        let (a, pa) = run(reference("simple_diode.js"), v);
+        let (b, pb) = run(f.clone(), v);
+        assert!((a - b).abs() < 1e-6, "{v} V: {a} vs {b}");
+        assert!(
+            (pa - pb).abs() < 1e-9 + 1e-6 * pa.abs(),
+            "{v} V: power {pa} vs {pb}"
+        );
+    }
+    // Breakdown: 150 V reverse through 1 kΩ clamps near -100 V.
+    let (a, _) = run(f.clone(), -150.0);
+    assert!((a + 100.0).abs() < 1.5, "{a}");
+    // Transient: the charge function is differentiable and finite past Fc·Vj.
+    let mut n = Netlist::new();
+    n.add(
+        "V1",
+        lib.get("core.vsine").unwrap().clone(),
+        &["in", "0"],
+        &[("Vamp", 5.0), ("freq", 1e6)],
+    );
+    n.add(
+        "R1",
+        lib.get("core.resistor").unwrap().clone(),
+        &["in", "a"],
+        &[("R", 100.0)],
+    );
+    n.add("D1", Arc::new(f), &["a", "0"], &[]);
+    let mut c = Circuit::compile(&n).unwrap();
+    c.dc_op().unwrap();
+    for _ in 0..2000 {
+        c.step_interactive(1e-9);
+        assert!(c.voltage("a").unwrap().is_finite());
+    }
+}
+
+#[test]
+fn function_errors_name_the_line() {
+    let src = "function helper(x) {\n  while (x > 0) {}\n  return x;\n}\nexport default component({\n  id: \"user.bad\",\n  pins: [\"A\", \"B\"],\n  equations(c) { c.current(\"A\", \"B\", () => helper(V(\"A\", \"B\"))); },\n});\n";
+    let e = ecs_script::load_component(src, "bad.js").unwrap_err();
+    assert_eq!((e.file.as_str(), e.line), ("bad.js", 2), "{e}");
+    assert!(e.message.contains("while"), "{e}");
+}
+
+#[test]
 fn js_dff_divides_a_clock() {
     let dff = Arc::new(reference("dff.js"));
     let lib = ecs_lib::library();

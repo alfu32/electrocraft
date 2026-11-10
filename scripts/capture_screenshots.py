@@ -170,6 +170,22 @@ def main():
         s.shot("24-component-inner-schematic.png", wait=2.0)
         s.close()
 
+        # Code editor: function-style template, highlighting and a suggestion list.
+        s = run("--sample", "rc-lowpass", commands=[{"id": "component.new", "args": {}}])
+        s.x("mousemove", 480, 99, "click", 1)
+        s.x("mousemove", 400, 350, "click", 1)
+        s.x("key", "End")
+        s.x("key", "Return")
+        s.x("type", "--delay", "80", "const k = Math.ta")
+        s.shot("26-component-code-editor.png", wait=0.6)
+        s.close()
+
+        s = run("--sample", "rc-lowpass")
+        s.x("mousemove", 90, 730, "click", 1)
+        s.x("type", "--delay", "80", "C1.")
+        s.shot("27-scope-formula-suggestions.png", wait=0.6)
+        s.close()
+
         s = run("--sample", "rc-lowpass", commands=[{"id": "analysis.run", "args": {"kind": "ac"}}])
         s.shot("17-analysis-ac-bode.png", wait=3.0)
         s.close()

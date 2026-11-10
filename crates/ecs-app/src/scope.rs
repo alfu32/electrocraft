@@ -849,11 +849,32 @@ impl App {
             }
         }
         ui.horizontal(|ui| {
-            let resp = ui.add(
-                egui::TextEdit::singleline(&mut self.scope.formula)
-                    .hint_text("formula, e.g. R1.P or out - in")
-                    .font(theme::mono(11.5))
-                    .desired_width(150.0),
+            let codes: Vec<crate::code_editor::Item> = self
+                .scope
+                .vars
+                .list
+                .iter()
+                .map(|v| {
+                    crate::code_editor::Item::new(
+                        &v.code,
+                        crate::code_editor::Kind::Code,
+                        &format!("{} ({})", v.desc, v.unit),
+                    )
+                })
+                .collect();
+            let resp = crate::code_editor::code_editor(
+                ui,
+                "scope-formula",
+                &mut self.scope.formula,
+                crate::code_editor::Lang::Expr,
+                &codes,
+                crate::code_editor::Opts {
+                    single_line: true,
+                    width: 150.0,
+                    hint: "formula, e.g. R1.P or out - in",
+                    help: false,
+                    ..Default::default()
+                },
             );
             let enter = resp.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter));
             if (ui.button("Add").clicked() || enter) && !self.scope.formula.trim().is_empty() {

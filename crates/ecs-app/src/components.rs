@@ -432,21 +432,52 @@ pub fn def_to_js(def: &ComponentDef, id: &str) -> Result<String, String> {
     Ok(o)
 }
 
-/// Starting JavaScript for a new component with the given pins.
+/// Starting JavaScript for a new component with the given pins, written
+/// with plain functions (an `e`-template variant is shown in a comment).
 pub fn template_js(id: &str, name: &str, pins: &[String]) -> String {
     let list: Vec<String> = pins.iter().map(|p| js_str(p)).collect();
     let (a, b) = (
         pins.first().cloned().unwrap_or("A".into()),
         pins.get(1).cloned().unwrap_or("B".into()),
     );
+    let (qa, qb) = (js_str(&a), js_str(&b));
     format!(
-        "// Equations are expressions over pin voltages V(a, b), parameters and t (spec 6).\n\
-export default component({{\n  id: {},\n  name: {},\n  category: \"User\",\n  prefix: \"U\",\n  pins: [{}],\n  params: {{\n    R: param(1e3, \"Ω\", \"Resistance\"),\n  }},\n  equations(c) {{\n    c.current({}, {}, e`V({a}, {b}) / R`);\n    c.probe(\"P\", e`V({a}, {b}) ^ 2 / R`, \"W\");\n  }},\n}});\n",
+        "// Equations are plain functions: Electrocraft compiles them (spec 6.1).
+// Their parameters name the component's parameters, states and c.let values;
+// V(\"A\", \"B\") reads a voltage and I(\"name\") a branch current. Inside:
+// const/let, if/else, return, ?:, Math.*, limexp, select, smoothstep and
+// helper functions declared in this file.
+
+/** Ohm's law with an optional soft current limit. */
+function conductance(v, R, Imax) {{
+  const i = v / R;
+  if (Imax <= 0) {{
+    return i;
+  }}
+  return Imax * Math.tanh(i / Imax);
+}}
+
+export default component({{
+  id: {},
+  name: {},
+  category: \"User\",
+  prefix: \"U\",
+  pins: [{}],
+  params: {{
+    R: param(1e3, \"Ω\", \"Resistance\"),
+    Imax: param(0, \"A\", \"Current limit (0: none)\"),
+  }},
+  equations(c) {{
+    c.let(\"Ir\", ({{ R, Imax }}) => conductance(V({qa}, {qb}), R, Imax));
+    c.current({qa}, {qb}, ({{ Ir }}) => Ir);
+    // The same with a template: c.current({qa}, {qb}, e`V({a}, {b}) / R`);
+    c.probe(\"P\", ({{ Ir }}) => V({qa}, {qb}) * Ir, \"W\");
+  }},
+}});
+",
         js_str(id),
         js_str(name),
         list.join(", "),
-        js_str(&a),
-        js_str(&b),
     )
 }
 

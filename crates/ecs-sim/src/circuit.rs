@@ -1311,8 +1311,24 @@ impl Circuit {
             }
         }
         let mut mag_ref: Vec<f64> = Vec::new();
+        // The previous update passed the voltage test only loosely: accept the
+        // point once its own KCL residual balances too.
+        let mut verify = false;
         for iter in 1..=max_iter {
             let limited = self.assemble(alpha, method, gmin, scale)?;
+            if verify && !limited {
+                let mut jx = vec![0.0; self.n];
+                self.solver.mul(&self.x, &mut jx);
+                let floor_i = opts.abstol.max(1e-9);
+                let balanced = (0..self.n_nodes.saturating_sub(1)).all(|r| {
+                    let f = (jx[r] - self.rhs[r]).abs();
+                    f <= opts.reltol * mag_ref[r].max(self.mag[r]) + floor_i
+                });
+                if balanced {
+                    return Ok(iter - 1);
+                }
+            }
+            verify = false;
             if iter == 1 {
                 // Tolerance scale from the starting (converged) point, so an
                 // overshooting iterate cannot loosen its own test.
@@ -1359,14 +1375,24 @@ impl Circuit {
                 let d = (xn[k] - self.x[k]).abs();
                 if d > tol {
                     converged = false;
-                    if d / tol > worst.0 {
-                        worst = (d / tol, k);
-                    }
+                }
+                if d / tol > worst.0 {
+                    worst = (d / tol, k);
                 }
             }
             self.x = xn;
-            if self.linear || (converged && iter > 1) || (converged && self.n == 0) {
+            if self.linear || (converged && self.n == 0) {
                 return Ok(iter);
+            }
+            if converged && iter > 1 {
+                // Quadratic convergence leaves the last update far inside the
+                // tolerance. A step that only just fits can be a Newton walk
+                // along an exponential (about one vt per step) far from the
+                // solution, as SPICE's device-current check also guards.
+                if worst.0 < 0.1 {
+                    return Ok(iter);
+                }
+                verify = true;
             }
             if iter == max_iter {
                 let name = self.unknown_names.get(worst.1).cloned().unwrap_or_default();

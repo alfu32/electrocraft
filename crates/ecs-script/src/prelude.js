@@ -60,8 +60,29 @@ function component(spec) {
 function __expr(x) {
   if (x instanceof Expr) return { src: x.src, loc: x.loc };
   if (typeof x === "number") return { src: String(x), loc: "0:0" };
-  if (typeof x === "string") throw new TypeError("write expressions with e`...`, not plain strings: " + x);
-  throw new TypeError("expected an e`...` expression");
+  // A plain function is compiled, not run: Electrocraft turns its source into
+  // an equation (parameters name component variables).
+  if (typeof x === "function") return { fn: x.toString(), loc: __loc() };
+  if (typeof x === "string") throw new TypeError("write expressions with e`...` or a function, not plain strings: " + x);
+  throw new TypeError("expected an e`...` expression or a function");
+}
+
+// The expression functions, also usable as plain numbers in hooks and helpers.
+// Configurable properties, so a component may declare its own with the same name.
+Object.assign(globalThis, {
+  vt: 0.025852,
+  limexp: (x) => (x < 80 ? Math.exp(x) : Math.exp(80) * (1 + x - 80)),
+  ln: Math.log,
+  safe_sqrt: (x) => Math.sqrt(Math.max(x, 0)),
+  safe_div: (a, b) => a / (Math.abs(b) < 1e-30 ? (b < 0 ? -1e-30 : 1e-30) : b),
+  select: (c, a, b) => (c ? a : b),
+  smoothstep: (a, b, x) => { const u = Math.min(Math.max((x - a) / (b - a), 0), 1); return u * u * (3 - 2 * u); },
+  smooth_abs: (x, eps) => { const e = eps === undefined ? 1e-6 : eps; return Math.sqrt(x * x + e * e); },
+  V: () => { throw new Error("V(...) only has a value inside equations (functions passed to c.current, c.voltage, c.let, c.probe)"); },
+  I: () => { throw new Error("I(...) only has a value inside equations"); },
+});
+for (const f of ["exp", "log10", "sqrt", "sin", "cos", "tan", "atan", "tanh", "sinh", "cosh", "abs", "floor", "pow", "min", "max"]) {
+  globalThis[f] = Math[f];
 }
 
 function __describeComponent() {
