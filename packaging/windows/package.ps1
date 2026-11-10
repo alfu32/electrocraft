@@ -64,6 +64,8 @@ if (-not [string]::IsNullOrWhiteSpace($env:ELECTROCRAFT_PFX_B64) -and -not [stri
     $Store = [Security.Cryptography.X509Certificates.X509Store]::new('TrustedPeople','LocalMachine')
     $Store.Open('ReadWrite'); $Store.Add($Certificate)
     try {
+      # The Appx module only loads in Windows PowerShell; pwsh 7 needs the compatibility layer.
+      Import-Module Appx -UseWindowsPowerShell -WarningAction SilentlyContinue -ErrorAction SilentlyContinue
       Add-AppxPackage -Path $Msix -ErrorAction Stop
       $Installed = Get-AppxPackage -Name $Identity.identityName
       if (-not $Installed -or $Installed.PackageFamilyName -cne $Identity.packageFamilyName) { throw 'Installed MSIX identity mismatch' }
