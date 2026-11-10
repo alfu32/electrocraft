@@ -15,6 +15,7 @@ mod components;
 mod icons;
 mod import_ui;
 mod mcp;
+mod mcp_http;
 mod packages;
 mod parts_ui;
 mod program_ui;

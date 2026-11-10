@@ -7,6 +7,30 @@ pub const DOT_SPEED: f64 = 0.35;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
+pub struct McpSettings {
+    pub bind: String,
+    pub port: u16,
+    pub https: bool,
+    pub certificate: String,
+    pub private_key: String,
+    pub access_log: bool,
+}
+
+impl Default for McpSettings {
+    fn default() -> Self {
+        Self {
+            bind: "127.0.0.1".into(),
+            port: 8765,
+            https: false,
+            certificate: String::new(),
+            private_key: String::new(),
+            access_log: true,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(default)]
 pub struct Settings {
     /// Current-dot speed factor (0.05 to 4).
     pub dot_speed: f64,
@@ -20,6 +44,7 @@ pub struct Settings {
     /// Online part catalogs: what the user approved (off by default).
     /// Credentials are not here: they live in the system keychain.
     pub catalogs: ecs_catalog::Consent,
+    pub mcp: McpSettings,
 }
 
 impl Default for Settings {
@@ -32,6 +57,7 @@ impl Default for Settings {
             electron_flow: false,
             iec_resistors: false,
             catalogs: ecs_catalog::Consent::default(),
+            mcp: McpSettings::default(),
         }
     }
 }

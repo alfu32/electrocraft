@@ -311,8 +311,8 @@ impl<B: Backend> Server<B> {
         out
     }
 
-    /// Handle one JSON-RPC message; None for notifications.
-    fn handle(&mut self, msg: &Value) -> Option<Value> {
+    /// Handle one JSON-RPC message, returning no response for notifications.
+    pub fn handle_message(&mut self, msg: &Value) -> Option<Value> {
         let method = msg["method"].as_str().unwrap_or("");
         let id = msg.get("id").cloned();
         // Responses to requests we never send, and notifications.
@@ -416,10 +416,13 @@ impl<B: Backend> Server<B> {
         };
         match msg {
             Value::Array(batch) => {
-                let replies: Vec<Value> = batch.iter().filter_map(|m| self.handle(m)).collect();
+                let replies: Vec<Value> = batch
+                    .iter()
+                    .filter_map(|m| self.handle_message(m))
+                    .collect();
                 (!replies.is_empty()).then(|| Value::Array(replies).to_string())
             }
-            other => self.handle(&other).map(|v| v.to_string()),
+            other => self.handle_message(&other).map(|v| v.to_string()),
         }
     }
 

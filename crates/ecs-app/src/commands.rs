@@ -269,6 +269,8 @@ pub fn catalog() -> Vec<Info> {
         ),
         info("app.home", "Start screen", none.clone()),
         info("app.settings", "Settings", none.clone()),
+        info("app.mcp_start", "Start MCP server", none.clone()),
+        info("app.mcp_stop", "Stop MCP server", none.clone()),
         info(
             "view.dot_speed",
             "Current-dot speed factor",
@@ -475,6 +477,8 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
         "bom.export_path" => Cmd::ExportBomPath(s(args, "path")?.into()),
         "app.home" => Cmd::Home,
         "app.settings" => Cmd::Settings,
+        "app.mcp_start" => Cmd::McpStart,
+        "app.mcp_stop" => Cmd::McpStop,
         "view.dot_speed" => Cmd::DotSpeed(n(args, "value")?),
         "app.palette" => Cmd::Palette,
         "app.shortcuts" => Cmd::Shortcuts,

@@ -2290,22 +2290,30 @@ impl App {
         }
         window.show(ctx, |ui| match which {
                 "settings" => {
-                    let page_id = ui.make_persistent_id("settings_catalogs");
-                    let mut catalogs = ui.data_mut(|data| data.get_temp::<bool>(page_id).unwrap_or(false));
+                    #[derive(Clone, Copy, Default, PartialEq)]
+                    enum SettingsPage {
+                        #[default]
+                        Simulation,
+                        Catalogs,
+                        Mcp,
+                    }
+                    let page_id = ui.make_persistent_id("settings_page");
+                    let mut page = ui.data(|data| data.get_temp::<SettingsPage>(page_id).unwrap_or_default());
                     ui.horizontal(|ui| {
-                        ui.selectable_value(&mut catalogs, false, "Live simulation");
-                        ui.selectable_value(&mut catalogs, true, "Online part catalogs");
+                        ui.selectable_value(&mut page, SettingsPage::Simulation, "Live simulation");
+                        ui.selectable_value(&mut page, SettingsPage::Catalogs, "Online part catalogs");
+                        ui.selectable_value(&mut page, SettingsPage::Mcp, "MCP server");
                     });
-                    ui.data_mut(|data| data.insert_temp(page_id, catalogs));
+                    ui.data_mut(|data| data.insert_temp(page_id, page));
                     ui.separator();
-                    // Each page gets the full remaining height, including on small screens.
                     egui::ScrollArea::vertical()
-                        .id_salt(("settings-page", catalogs))
+                        .id_salt(("settings-page", page as u8))
                         .auto_shrink([false, false])
                         .show(ui, |ui| {
-                    if catalogs {
-                        self.catalog_settings(ui);
-                        return;
+                    match page {
+                        SettingsPage::Catalogs => return self.catalog_settings(ui),
+                        SettingsPage::Mcp => return self.mcp_settings(ui),
+                        SettingsPage::Simulation => {}
                     }
                     ui.label(RichText::new("Live simulation").font(theme::bold(13.0)));
                     let before = (self.settings.clone(), self.grid, self.volt_colors, self.current_dots);

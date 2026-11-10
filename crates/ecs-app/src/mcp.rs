@@ -18,8 +18,11 @@ use crate::commands;
 use ecs_mcp::{Backend, Section, Server, ToolDef};
 use serde_json::{Value, json};
 use std::io::Write;
-use std::sync::mpsc::{Receiver, Sender, channel};
-use std::time::Duration;
+use std::sync::Arc;
+use std::sync::mpsc::{Receiver, Sender, SyncSender, channel, sync_channel};
+use std::time::{Duration, Instant};
+
+const TOOL_TIMEOUT: Duration = Duration::from_secs(120);
 
 /// A request for the UI thread.
 pub enum Job {
@@ -27,6 +30,7 @@ pub enum Job {
         tool: String,
         args: Value,
         reply: Sender<Result<String, String>>,
+        deadline: Instant,
     },
     /// The client closed the connection.
     Closed,
@@ -35,7 +39,7 @@ pub enum Job {
 /// Registry commands that are not offered as tools: they open dialogs or
 /// windows, depend on the pointer, or end the application.
 fn exposed(id: &str) -> bool {
-    const HIDDEN: [&str; 24] = [
+    const HIDDEN: [&str; 26] = [
         "file.open",
         "file.save_as",
         "file.import_spice",
@@ -48,6 +52,8 @@ fn exposed(id: &str) -> bool {
         "app.shortcuts",
         "app.about",
         "app.settings",
+        "app.mcp_start",
+        "app.mcp_stop",
         "app.home",
         "analysis.dialog",
         "component.new",
@@ -155,9 +161,21 @@ fn command_id(tool: &str) -> Option<&'static str> {
 }
 
 /// What the protocol thread uses to reach the UI thread and the manual.
+#[derive(Clone)]
 pub struct AppBackend {
-    tx: Sender<Job>,
-    tools: Vec<ToolDef>,
+    tx: SyncSender<Job>,
+    tools: Arc<Vec<ToolDef>>,
+    ctx: egui::Context,
+}
+
+impl AppBackend {
+    pub fn new(tx: SyncSender<Job>, ctx: egui::Context) -> Self {
+        Self {
+            tx,
+            tools: Arc::new(tool_defs()),
+            ctx,
+        }
+    }
 }
 
 impl Backend for AppBackend {
@@ -165,18 +183,23 @@ impl Backend for AppBackend {
         ("electrocraft".into(), env!("CARGO_PKG_VERSION").into())
     }
     fn tools(&self) -> Vec<ToolDef> {
-        self.tools.clone()
+        self.tools.as_ref().clone()
     }
     fn call(&mut self, tool: &str, args: &Value) -> Result<String, String> {
         let (reply, wait) = channel();
         self.tx
-            .send(Job::Call {
+            .try_send(Job::Call {
                 tool: tool.into(),
                 args: args.clone(),
                 reply,
+                deadline: Instant::now() + TOOL_TIMEOUT,
             })
-            .map_err(|_| "Electrocraft is closing".to_string())?;
-        match wait.recv_timeout(Duration::from_secs(120)) {
+            .map_err(|error| match error {
+                std::sync::mpsc::TrySendError::Full(_) => "Electrocraft is busy".to_string(),
+                std::sync::mpsc::TrySendError::Disconnected(_) => "MCP server stopped".to_string(),
+            })?;
+        self.ctx.request_repaint();
+        match wait.recv_timeout(TOOL_TIMEOUT) {
             Ok(r) => r,
             Err(_) => Err("Electrocraft did not answer in time (is a dialog open?)".into()),
         }
@@ -352,14 +375,11 @@ pub fn take_stdout() -> Box<dyn Write + Send> {
 
 /// Start the protocol thread; the UI thread polls the returned receiver.
 pub fn start(ctx: egui::Context, out: Box<dyn Write + Send>) -> Receiver<Job> {
-    let (tx, rx) = channel();
+    let (tx, rx) = sync_channel(32);
     std::thread::Builder::new()
         .name("mcp".into())
         .spawn(move || {
-            let mut server = Server::new(AppBackend {
-                tx: tx.clone(),
-                tools: tool_defs(),
-            });
+            let mut server = Server::new(AppBackend::new(tx.clone(), ctx.clone()));
             let stdin = std::io::stdin();
             let _ = server.serve(stdin.lock(), out);
             let _ = tx.send(Job::Closed);
@@ -387,19 +407,33 @@ fn looks_failed(status: &str) -> bool {
 impl App {
     /// Run the tool calls that arrived (each frame while serving MCP).
     pub fn poll_mcp(&mut self, ctx: &egui::Context) {
-        let Some(rx) = self.mcp.take() else { return };
-        while let Ok(job) = rx.try_recv() {
-            match job {
-                Job::Call { tool, args, reply } => {
-                    let result = self.mcp_call(&tool, &args, ctx);
-                    let _ = reply.send(result);
+        self.mcp_network.poll();
+        for _ in 0..32 {
+            let stdio = self.mcp.as_ref().and_then(|rx| rx.try_recv().ok());
+            let network = self.mcp_network.try_job();
+            if stdio.is_none() && network.is_none() {
+                break;
+            }
+            for job in stdio.into_iter().chain(network) {
+                match job {
+                    Job::Call {
+                        tool,
+                        args,
+                        reply,
+                        deadline,
+                    } => {
+                        if Instant::now() < deadline {
+                            let result = self.mcp_call(&tool, &args, ctx);
+                            let _ = reply.send(result);
+                        }
+                    }
+                    Job::Closed => {
+                        self.mcp = None;
+                        ctx.send_viewport_cmd(egui::ViewportCommand::Close);
+                    }
                 }
-                Job::Closed => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
             }
         }
-        self.mcp = Some(rx);
-        // Keep polling while a client is connected.
-        ctx.request_repaint_after(Duration::from_millis(40));
     }
 
     fn mcp_call(
@@ -769,11 +803,8 @@ mod tests {
 
     #[test]
     fn server_end_to_end_over_the_protocol() {
-        let (tx, _rx) = channel();
-        let mut server = Server::new(AppBackend {
-            tx,
-            tools: tool_defs(),
-        });
+        let (tx, _rx) = sync_channel(1);
+        let mut server = Server::new(AppBackend::new(tx, egui::Context::default()));
         let reply = |s: &mut Server<AppBackend>, line: Value| -> Value {
             serde_json::from_str(&s.handle_line(&line.to_string()).unwrap()).unwrap()
         };

@@ -19,7 +19,7 @@ analyses with plots, SPICE model and subcircuit import, online part catalogs
 (JLCPCB/LCSC, DigiKey, Mouser, TME, Farnell: search, place real parts with
 their values, keep a preferred vendor per part and export a bill of materials;
 off until you enable a provider in Settings, keys kept in the system keychain),
-an MCP server (`electrocraft --mcp`: agents place, wire, run and read circuits in your open window, with a built-in manual), and a companion tool that fits models to datasheet curves.
+an MCP server (agents place, wire, run and read circuits in your open window, with a built-in manual), and a companion tool that fits models to datasheet curves.
 
 Electrocraft is a native Rust app: an egui shell in SolidCraft's visual
 language, a Raylib off-screen canvas operated like Wirecraft's, and a modified
@@ -40,6 +40,20 @@ cargo run --release -- --mcp             # MCP server on stdio: {"mcpServers": {
 cargo run --release -- --sample rc-lowpass --commands run-ac.json   # [{"id": "analysis.run", "args": {"kind": "ac"}}]
 cargo run --release -p datasheet-tool -- --example npn             # datasheet model fitting
 ```
+
+### MCP from a running window
+
+Open **Settings → MCP server**. Choose the bind address and port, then select
+HTTP or HTTPS and click **Start server**. The default is HTTP on
+`127.0.0.1:8765`, which needs no certificate. HTTPS uses a PEM certificate
+chain and a PEM private key selected in the tab.
+
+Connect a Streamable HTTP client to the displayed `/mcp` URL and send
+`Authorization: Bearer <token>` with each request. **Copy token** copies the
+current token, which changes each time the listener starts. **Stop server**
+closes the listener. The access log shows recent request metadata and can be
+disabled or cleared in the tab. Server settings are saved between launches.
+Start the listener from Settings each time you want to use it.
 
 Samples: `led-switch`, `rc-lowpass`, `astable`, `counter`, `rectifier`, `divider`.
 User JavaScript components go in `~/.config/electrocraft/components/` and reload
