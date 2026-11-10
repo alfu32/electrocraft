@@ -66,7 +66,9 @@ jobs:
       - run: python3 scripts/release/portable.py --target ${{ matrix.target }}
       - name: Snap (core24, strict, mesa-2404 GPU content)
         run: |
-          sudo apt-get install -y squashfs-tools xvfb imagemagick
+          # Runtime libraries the snap bundles (core24 and mesa-2404 lack them) and the XKB data.
+          sudo apt-get install -y squashfs-tools xvfb imagemagick xkb-data \
+            libxcursor1 libxrandr2 libxi6 libxinerama1 libxrender1 libxkbcommon-x11-0 libxcb-xkb1
           python3 scripts/release/snap.py --arch ${{ matrix.arch }} --output dist
       - name: Install the snap and check that it starts and paints a window
         run: |

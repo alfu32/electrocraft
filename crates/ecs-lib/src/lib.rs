@@ -3,6 +3,8 @@
 //! expression; nothing here touches solver internals.
 
 mod digital;
+pub mod ics;
+pub mod parts;
 
 use ecs_expr::{Expr, parse};
 use ecs_model::{
@@ -856,7 +858,12 @@ pub fn definitions() -> Vec<ComponentDef> {
 /// The built-in library.
 pub fn library() -> Library {
     let mut lib = Library::new();
-    for d in definitions().into_iter().chain(digital::definitions()) {
+    for d in definitions()
+        .into_iter()
+        .chain(digital::definitions())
+        .chain(ics::definitions())
+        .chain(ecs_mcu::definitions())
+    {
         lib.insert(d);
     }
     lib

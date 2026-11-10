@@ -39,6 +39,12 @@ pub struct Part {
     /// Saved control states (switch positions), by state name.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub states: BTreeMap<String, f64>,
+    /// Manufacturer part number, e.g. `2N2222A`, `74HC00`, `PIC16F84A`.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub part_number: String,
+    /// Program source of a microcontroller (assembly).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub code: String,
 }
 
 /// A wire as an orthogonal polyline.
@@ -775,6 +781,17 @@ pub enum Command {
         def: String,
         symbol: String,
     },
+    /// Set a part number and the parameter values it brings, in one step.
+    SetPartNumber {
+        part: Id,
+        number: String,
+        params: Vec<(String, String)>,
+    },
+    /// Replace a microcontroller's program.
+    SetPartCode {
+        part: Id,
+        code: String,
+    },
 }
 
 /// Copied items for paste and duplicate.
@@ -922,6 +939,23 @@ impl Schematic {
                 None => self.components.push(*c),
             },
             Command::RemoveComponent(id) => self.components.retain(|c| c.id != id),
+            Command::SetPartNumber {
+                part,
+                number,
+                params,
+            } => {
+                if let Some(p) = self.part_mut(part) {
+                    p.part_number = number;
+                    for (k, v) in params {
+                        p.params.insert(k, v);
+                    }
+                }
+            }
+            Command::SetPartCode { part, code } => {
+                if let Some(p) = self.part_mut(part) {
+                    p.code = code;
+                }
+            }
             Command::SetPartDef { part, def, symbol } => {
                 if let Some(p) = self.part_mut(part) {
                     // Keep only overrides the new definition may still use.
@@ -1222,6 +1256,8 @@ pub fn new_part(def: &str, symbol: &str, refdes: String, pos: P2) -> Part {
         mirror: false,
         params: BTreeMap::new(),
         states: BTreeMap::new(),
+        part_number: String::new(),
+        code: String::new(),
     }
 }
 

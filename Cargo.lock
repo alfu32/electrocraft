@@ -860,10 +860,11 @@ dependencies = [
 
 [[package]]
 name = "ecs-app"
-version = "0.1.4"
+version = "0.1.5"
 dependencies = [
  "ecs-expr",
  "ecs-lib",
+ "ecs-mcu",
  "ecs-model",
  "ecs-render",
  "ecs-schematic",
@@ -899,6 +900,16 @@ dependencies = [
 
 [[package]]
 name = "ecs-lib"
+version = "0.1.0"
+dependencies = [
+ "ecs-expr",
+ "ecs-mcu",
+ "ecs-model",
+ "ecs-sim",
+]
+
+[[package]]
+name = "ecs-mcu"
 version = "0.1.0"
 dependencies = [
  "ecs-expr",

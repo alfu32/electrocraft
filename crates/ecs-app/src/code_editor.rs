@@ -19,6 +19,16 @@ pub enum Lang {
     Expr,
     /// SPICE models and subcircuits.
     Spice,
+    /// PIC16 / PIC24 assembly (`;` comments).
+    AsmPic,
+    /// PIC32 MIPS assembly (`#` comments).
+    AsmMips,
+}
+
+impl Lang {
+    fn is_asm(self) -> bool {
+        matches!(self, Lang::AsmPic | Lang::AsmMips)
+    }
 }
 
 /// What a suggestion is.
@@ -432,6 +442,56 @@ pub fn declared(lang: Lang, text: &str) -> Vec<Item> {
             }
         }
         Lang::Expr => {}
+        Lang::AsmPic | Lang::AsmMips => {
+            let mut in_cblock = false;
+            for raw in text.lines() {
+                let line = raw.split([';', '#']).next().unwrap_or("");
+                let t = line.trim();
+                let upper = t.to_ascii_uppercase();
+                if upper.starts_with("CBLOCK") {
+                    in_cblock = true;
+                    continue;
+                }
+                if upper.starts_with("ENDC") {
+                    in_cblock = false;
+                    continue;
+                }
+                if in_cblock {
+                    for name in t
+                        .split([',', ' '])
+                        .map(|x| x.split(':').next().unwrap_or("").trim())
+                        .filter(|x| !x.is_empty())
+                    {
+                        push(Item::new(name, Kind::Variable, "RAM byte (cblock)"));
+                    }
+                    continue;
+                }
+                let mut words = t.split_whitespace();
+                let first = words.next().unwrap_or("");
+                if let Some(label) = first.strip_suffix(':') {
+                    push(Item::new(label, Kind::Function, "label"));
+                } else if !line.starts_with(char::is_whitespace)
+                    && lang == Lang::AsmPic
+                    && !first.is_empty()
+                {
+                    match words.next().map(|w| w.to_ascii_uppercase()) {
+                        Some(w) if w == "EQU" || w == "SET" => push(Item::new(
+                            first,
+                            Kind::Variable,
+                            &format!("{first} {}", t[first.len()..].trim()),
+                        )),
+                        _ => push(Item::new(first, Kind::Function, "label")),
+                    }
+                }
+                let lower = t.to_ascii_lowercase();
+                if (lower.starts_with(".equ") || lower.starts_with(".set"))
+                    && let Some(name) = t.split_whitespace().nth(1).map(|n| n.trim_end_matches(','))
+                    && !matches!(name, "noreorder" | "reorder" | "noat" | "at")
+                {
+                    push(Item::new(name, Kind::Variable, t));
+                }
+            }
+        }
     }
     out
 }
@@ -535,8 +595,18 @@ pub fn builtins(lang: Lang) -> Vec<Item> {
                     .map(|k| Item::new(k, Kind::Keyword, "model type")),
             );
         }
+        // The device supplies its instructions and registers (`extra`).
+        Lang::AsmPic | Lang::AsmMips => {}
     }
     v
+}
+
+/// Vocabulary of a microcontroller: instructions, directives, registers.
+pub fn mcu_vocabulary(def_id: &str) -> Vec<Item> {
+    ecs_mcu::vocabulary(def_id)
+        .into_iter()
+        .map(|(w, d, ins)| Item::new(&w, if ins { Kind::Keyword } else { Kind::Param }, &d))
+        .collect()
 }
 
 // ---------------------------------------------------------------- lexing
@@ -591,7 +661,9 @@ fn lex(text: &str, lang: Lang) -> Vec<Tok> {
             });
             continue;
         }
-        let spice_comment = lang == Lang::Spice && ((line_start && ch == '*') || ch == ';');
+        let spice_comment = (lang == Lang::Spice && ((line_start && ch == '*') || ch == ';'))
+            || (lang == Lang::AsmPic && ch == ';')
+            || (lang == Lang::AsmMips && (ch == '#' || text[at..].starts_with("//")));
         line_start = false;
         if spice_comment || (lang == Lang::Js && text[at..].starts_with("//")) {
             while k < chars.len() && chars[k].1 != '\n' {
@@ -605,7 +677,7 @@ fn lex(text: &str, lang: Lang) -> Vec<Tok> {
             }
             k = (k + 2).min(chars.len());
             kind = Tk::Comment;
-        } else if lang == Lang::Js && (ch == '"' || ch == '\'') {
+        } else if (lang == Lang::Js && (ch == '"' || ch == '\'')) || (lang.is_asm() && ch == '"') {
             k += 1;
             while k < chars.len() && chars[k].1 != ch && chars[k].1 != '\n' {
                 if chars[k].1 == '\\' {
@@ -642,7 +714,10 @@ fn lex(text: &str, lang: Lang) -> Vec<Tok> {
                 k += 1;
             }
             kind = Tk::Num;
-        } else if is_ident_start(ch) || (lang == Lang::Spice && ch == '.') {
+        } else if is_ident_start(ch)
+            || ((lang == Lang::Spice || lang.is_asm()) && ch == '.')
+            || (lang.is_asm() && ch == '#' && chars.get(k + 1).is_some_and(|c| c.1.is_alphabetic()))
+        {
             k += 1;
             while k < chars.len()
                 && (is_ident(chars[k].1) || (lang != Lang::Js && chars[k].1 == '.'))
@@ -690,7 +765,19 @@ pub fn highlight(text: &str, lang: Lang, vocab: &[Item], font: egui::FontId) -> 
         color,
         ..Default::default()
     };
-    let class = |w: &str| vocab.iter().find(|i| i.label == w).map(|i| i.kind);
+    let asm = lang.is_asm();
+    let class = |w: &str| {
+        vocab
+            .iter()
+            .find(|i| {
+                if asm {
+                    i.label.eq_ignore_ascii_case(w)
+                } else {
+                    i.label == w
+                }
+            })
+            .map(|i| i.kind)
+    };
     let toks = lex(text, lang);
     for (n, t) in toks.iter().enumerate() {
         let s = &text[t.range.clone()];

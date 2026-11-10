@@ -15,6 +15,7 @@ mod components;
 mod icons;
 mod import_ui;
 mod packages;
+mod program_ui;
 mod samples;
 mod scene;
 mod scope;
@@ -80,6 +81,7 @@ impl eframe::App for Shell {
             app.scope_window(&ctx);
             app.breadcrumb(&ctx);
             app.component_editor(&ctx);
+            app.program_window(&ctx);
             if app.show_inspector {
                 app.inspector(&ctx);
             }

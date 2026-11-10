@@ -545,6 +545,20 @@ impl ComponentDef {
     }
 }
 
+/// A real part number mapped to a definition and the parameter values it
+/// sets (spec 7): `2N2222A` → `core.npn` with its model, `74HC00` → the chip.
+#[derive(Debug, Clone, PartialEq)]
+pub struct KnownPart {
+    pub number: String,
+    /// Definition id it uses.
+    pub def: String,
+    /// Parameter values it sets.
+    pub params: Vec<(String, f64)>,
+    pub note: String,
+    /// The number new parts of this definition get.
+    pub default: bool,
+}
+
 /// A set of definitions by id.
 #[derive(Debug, Clone, Default)]
 pub struct Library {

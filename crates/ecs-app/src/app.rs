@@ -116,6 +116,18 @@ pub enum Cmd {
     SaveAll,
     /// The settings dialog.
     Settings,
+    /// Open a microcontroller's program editor.
+    EditProgram(String),
+    /// Set a part's program (assembly source).
+    SetProgram {
+        refdes: String,
+        code: String,
+    },
+    /// Set a part number (known numbers set model parameters).
+    SetPartNumber {
+        refdes: String,
+        number: String,
+    },
     /// Current-dot speed factor.
     DotSpeed(f64),
     /// Add a scope channel: a formula over net and part codes.
@@ -251,6 +263,7 @@ pub struct App {
     /// Schematics set aside while editing a component's inner schematic.
     pub stack: Vec<crate::component_ui::Frame>,
     pub comp_editor: Option<crate::component_ui::CompEditor>,
+    pub program_editor: Option<crate::program_ui::ProgramEditor>,
     /// Problems compiling the document's own components.
     pub local_problems: Vec<String>,
     /// Component prototypes last compiled into the catalog.
@@ -259,6 +272,9 @@ pub struct App {
     texture: Option<TextureHandle>,
     last_list: Option<ecs_render::DisplayList>,
     pub frame_ms: f32,
+    /// Smoothed seconds between canvas frames actually shown, and the last one.
+    canvas_dt: f64,
+    last_canvas_frame: Option<Instant>,
     pub readback_ms: f32,
     pub grid: bool,
     pub volt_colors: bool,
@@ -347,12 +363,15 @@ impl App {
             scope: crate::scope::Scope::default(),
             stack: Vec::new(),
             comp_editor: None,
+            program_editor: None,
             local_problems: Vec::new(),
             local_cache: None,
             renderer,
             texture: None,
             last_list: None,
             frame_ms: 0.0,
+            canvas_dt: 1.0 / 60.0,
+            last_canvas_frame: None,
             readback_ms: 0.0,
             grid: true,
             volt_colors: true,
@@ -390,6 +409,7 @@ impl App {
         app.grid = app.settings.grid;
         app.volt_colors = app.settings.volt_colors;
         app.current_dots = app.settings.current_dots;
+        ecs_schematic::symbols::set_resistor_style(app.settings.iec_resistors);
         app.package_problems = crate::packages::load_packages(&mut app.cat);
         app.user_lib.poll(&mut app.cat);
         let cat = Catalog::builtin();
@@ -1179,6 +1199,34 @@ impl App {
             Cmd::Shortcuts => self.dialog = Some("shortcuts"),
             Cmd::About => self.dialog = Some("about"),
             Cmd::Settings => self.dialog = Some("settings"),
+            Cmd::EditProgram(r) => {
+                match self.doc.parts.iter().find(|p| p.refdes == r).map(|p| p.id) {
+                    Some(id) => self.open_program(id),
+                    None => self.status = format!("No part {r}"),
+                }
+            }
+            Cmd::SetProgram { refdes, code } => match self
+                .doc
+                .parts
+                .iter()
+                .find(|p| p.refdes == refdes)
+                .map(|p| p.id)
+            {
+                Some(id) => {
+                    self.edit(Command::SetPartCode { part: id, code });
+                }
+                None => self.status = format!("No part {refdes}"),
+            },
+            Cmd::SetPartNumber { refdes, number } => match self
+                .doc
+                .parts
+                .iter()
+                .find(|p| p.refdes == refdes)
+                .map(|p| p.id)
+            {
+                Some(id) => self.set_part_number(id, &number),
+                None => self.status = format!("No part {refdes}"),
+            },
             Cmd::DotSpeed(v) => {
                 self.settings.dot_speed = v.clamp(0.05, 4.0);
                 self.settings.save();
@@ -1612,6 +1660,18 @@ impl App {
             current_dots: self.current_dots,
             anim_t: self.started.elapsed().as_secs_f64(),
             dot_speed: self.settings.dot_speed,
+            electron_flow: self.settings.electron_flow,
+            // Shown-frame cadence: egui frames, or the slower canvas pipeline.
+            frame_dt: {
+                let ui_dt = ui.input(|i| i.unstable_dt) as f64;
+                let render_dt = (self.frame_ms + self.readback_ms) as f64 / 1000.0;
+                let canvas_dt = if self.renderer.is_some() {
+                    self.canvas_dt
+                } else {
+                    0.0
+                };
+                ui_dt.max(render_dt).max(canvas_dt).clamp(1.0 / 120.0, 0.25)
+            },
             ppp,
             hover: self.hover,
             hover_pin: if matches!(self.tool, Tool::Wire | Tool::Probe) {
@@ -1692,6 +1752,12 @@ impl App {
                 self.last_list = Some(list.clone());
             }
             if let Some(frame) = r.take_frame() {
+                let now = Instant::now();
+                if let Some(prev) = self.last_canvas_frame {
+                    let dt = now.duration_since(prev).as_secs_f64().min(0.5);
+                    self.canvas_dt = 0.8 * self.canvas_dt + 0.2 * dt;
+                }
+                self.last_canvas_frame = Some(now);
                 self.frame_ms = frame.render_ms;
                 self.readback_ms = frame.readback_ms;
                 let img = egui::ColorImage::from_rgba_unmultiplied(
@@ -2082,6 +2148,10 @@ impl App {
                     }
                 }
                 ui.separator();
+            }
+            if crate::chrome::menu_item(ui, "New Component…", "") {
+                chosen = Some(Cmd::NewComponent);
+                ui.close();
             }
             if !self.stack.is_empty()
                 && crate::chrome::menu_item(ui, "Back to enclosing schematic", "")

@@ -88,6 +88,10 @@ pub struct SceneOpts {
     pub anim_t: f64,
     /// Current-dot speed factor (settings).
     pub dot_speed: f64,
+    /// Dots follow electron flow (− to +) instead of conventional current.
+    pub electron_flow: bool,
+    /// Seconds between shown canvas frames, to keep dots from aliasing.
+    pub frame_dt: f64,
     pub ppp: f32,
     pub hover: Option<Item>,
     pub hover_pin: Option<P2>,
@@ -114,6 +118,8 @@ impl Default for SceneOpts {
             current_dots: true,
             anim_t: 0.0,
             dot_speed: crate::settings::DOT_SPEED,
+            electron_flow: false,
+            frame_dt: 1.0 / 60.0,
             ppp: 1.0,
             hover: None,
             hover_pin: None,
@@ -158,6 +164,18 @@ fn led_color(index: f64) -> Color32 {
         4 => Color32::from_rgb(0xF4, 0xF4, 0xFF),
         _ => Color32::from_rgb(0xFF, 0x40, 0x3A),
     }
+}
+
+/// Spacing of current dots in world units.
+const DOT_SPACING: f64 = 16.0;
+
+/// Dot velocity for a current with the user's settings. A dot never moves
+/// more than 0.4 spacing per shown frame: faster, the eye pairs it with the
+/// next dot and the flow seems to run backwards (the wagon-wheel effect).
+fn dot_velocity(i: f64, opts: &SceneOpts) -> f64 {
+    let v = dot_speed(i) * opts.dot_speed * if opts.electron_flow { -1.0 } else { 1.0 };
+    let cap = 0.4 * DOT_SPACING / opts.frame_dt.max(1e-3);
+    v.clamp(-cap, cap)
 }
 
 /// Dots speed in px/s for a current: log scale so µA and A both move.
@@ -526,13 +544,7 @@ pub fn build(
     }
     // Current dots along wires.
     for (from, to, i) in &flows {
-        dots_along(
-            &mut out,
-            *from,
-            *to,
-            dot_speed(*i) * opts.dot_speed,
-            opts.anim_t,
-        );
+        dots_along(&mut out, *from, *to, dot_velocity(*i, opts), opts.anim_t);
     }
     // Junctions.
     for j in doc.junctions() {
@@ -634,13 +646,7 @@ pub fn build(
             } else {
                 (pins[1].1, pins[0].1)
             };
-            dots_along(
-                &mut out,
-                from,
-                to,
-                dot_speed(i) * opts.dot_speed,
-                opts.anim_t,
-            );
+            dots_along(&mut out, from, to, dot_velocity(i, opts), opts.anim_t);
         }
         if opts.thumbnail {
             continue;
@@ -851,7 +857,7 @@ fn dots_along(out: &mut Out<'_>, a: P2, b: P2, speed_px: f64, t: f64) {
     if len < 1e-9 {
         return;
     }
-    let spacing = 16.0;
+    let spacing = DOT_SPACING;
     let phase = (t * speed_px).rem_euclid(spacing);
     let mut s = phase;
     while s < len {
@@ -982,5 +988,93 @@ pub fn paint_egui(
                 );
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod flow_tests {
+    use super::*;
+
+    #[test]
+    fn wire_dots_follow_conventional_current() {
+        let cat = Catalog::builtin();
+        let s = crate::samples::all()
+            .into_iter()
+            .find(|s| s.id == "led-switch")
+            .unwrap();
+        let mut doc = (s.build)(&cat);
+        let sw = doc
+            .parts
+            .iter_mut()
+            .find(|p| p.def == "core.switch")
+            .unwrap();
+        sw.states.insert("closed".into(), 1.0);
+        let built = catalog::build(&cat, &doc);
+        let mut c = ecs_sim::Circuit::compile(&built.netlist).unwrap();
+        for p in &doc.parts {
+            if let Some(k) = c.instance_index(&p.refdes) {
+                for (st, v) in &p.states {
+                    c.set_state(k, st, *v);
+                }
+            }
+        }
+        c.dc_op().unwrap();
+        let mut live = Live::default();
+        for p in &doc.parts {
+            if let Some(k) = c.instance_index(&p.refdes) {
+                live.part_i.insert(p.id, c.branch_currents(k));
+            }
+        }
+        let flows = wire_flows(&doc, &built, &live, &cat);
+        // The wire from the battery's + terminal (0, -40) up to the switch.
+        let piece = flows
+            .iter()
+            .find(|(a, b, _)| (a[0] == 0.0 && b[0] == 0.0) && (a[1] == -40.0 || b[1] == -40.0))
+            .expect("battery wire");
+        let (from, to, i) = *piece;
+        // Conventional current leaves + and moves away from the battery (upward, -y).
+        let moving_up = if i > 0.0 {
+            to[1] < from[1]
+        } else {
+            from[1] < to[1]
+        };
+        println!("{from:?} -> {to:?}: {i}");
+        assert!(moving_up, "{from:?} -> {to:?}: {i}");
+    }
+
+    /// What is seen: dots on the wire at a DC source's + pin, and inside the
+    /// source, for a plain source and load (the divider sample).
+    #[test]
+    fn dots_leave_a_dc_source_at_plus() {
+        let cat = Catalog::builtin();
+        let s = crate::samples::all()
+            .into_iter()
+            .find(|s| s.id == "divider")
+            .unwrap();
+        let doc = (s.build)(&cat);
+        let built = catalog::build(&cat, &doc);
+        let mut c = ecs_sim::Circuit::compile(&built.netlist).unwrap();
+        c.dc_op().unwrap();
+        let mut live = Live::default();
+        for p in &doc.parts {
+            if let Some(k) = c.instance_index(&p.refdes) {
+                live.part_i.insert(p.id, c.branch_currents(k));
+            }
+        }
+        let v1 = doc.parts.iter().find(|p| p.def == "core.vdc").unwrap();
+        let pins = v1.pins();
+        let plus = pins.iter().find(|p| p.0 == "P").unwrap().1;
+        println!("V1 pins {pins:?}, branch current {:?}", live.part_i[&v1.id]);
+        let flows = wire_flows(&doc, &built, &live, &cat);
+        for f in &flows {
+            println!("{f:?}");
+        }
+        let piece = flows
+            .iter()
+            .find(|(a, b, _)| *a == plus || *b == plus)
+            .expect("wire at +");
+        let (from, to, i) = *piece;
+        let leaves_plus = (i > 0.0 && from == plus) || (i < 0.0 && to == plus);
+        assert!(leaves_plus, "wire dots enter + : {piece:?}");
     }
 }

@@ -197,6 +197,31 @@ def main():
         s.shot("29-settings.png", wait=2.0)
         s.close()
 
+        # Microcontroller: the PIC sample and its program editor.
+        s = run("--sample", "pic-blink")
+        s.x("mousemove", 1500, 900)
+        s.shot("30-pic-blinker.png", wait=3.0)
+        s.close()
+        s = run("--sample", "pic-blink", commands=[{"id": "mcu.edit_program", "args": {"refdes": "U1"}}])
+        s.x("mousemove", 1500, 900)
+        s.shot("31-pic-program.png", wait=2.0)
+        s.close()
+
+        # Part numbers: Q2 as a 2N2222A.
+        s = run("--sample", "astable", commands=[{"id": "schematic.set_part_number", "args": {"refdes": "Q2", "number": "2N2222A"}}])
+        s.x("mousemove", 916, 402, "click", 1)
+        s.x("mousemove", 1100, 560)
+        s.shot("32-part-number.png", wait=1.5)
+        s.close()
+
+        # Logic chips in the components panel.
+        s = run("--sample", "counter")
+        s.x("mousemove", 120, 218, "click", 1)
+        s.x("type", "--delay", "60", "74x")
+        s.x("mousemove", 1100, 560)
+        s.shot("33-logic-chips.png", wait=1.0)
+        s.close()
+
         s = run("--sample", "rc-lowpass", commands=[{"id": "analysis.run", "args": {"kind": "ac"}}])
         s.shot("17-analysis-ac-bode.png", wait=3.0)
         s.close()

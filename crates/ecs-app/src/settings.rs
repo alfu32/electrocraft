@@ -13,6 +13,10 @@ pub struct Settings {
     pub grid: bool,
     pub volt_colors: bool,
     pub current_dots: bool,
+    /// Dots move with electrons (− to +) instead of conventional current (+ to −).
+    pub electron_flow: bool,
+    /// Resistors as IEC rectangles instead of ANSI/IEEE zigzags.
+    pub iec_resistors: bool,
 }
 
 impl Default for Settings {
@@ -22,6 +26,8 @@ impl Default for Settings {
             grid: true,
             volt_colors: true,
             current_dots: true,
+            electron_flow: false,
+            iec_resistors: false,
         }
     }
 }

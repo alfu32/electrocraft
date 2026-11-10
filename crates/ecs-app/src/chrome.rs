@@ -1540,13 +1540,56 @@ impl App {
                     });
                     ui.add(egui::TextEdit::singleline(&mut self.component_query).hint_text("Search components").desired_width(f32::INFINITY));
                     ui.add_space(2.0);
+                    let new_btn = egui::Button::new(RichText::new("＋  New component…").color(c::ACTIVE_TAB_TEXT))
+                        .fill(c::ACTIVE_TAB_BG.gamma_multiply(0.5))
+                        .min_size(vec2(ui.available_width(), 26.0));
+                    if ui
+                        .add(new_btn)
+                        .on_hover_text("Draw a symbol and describe it with a schematic or JavaScript; it is saved in this schematic")
+                        .clicked()
+                    {
+                        cmd = Some(Cmd::NewComponent);
+                    }
+                    ui.add_space(2.0);
                     let q = self.component_query.to_lowercase();
+                    // Components defined in this schematic first.
+                    let local: Vec<(String, String, String)> = self
+                        .root_doc()
+                        .components
+                        .iter()
+                        .filter(|c| q.is_empty() || c.name.to_lowercase().contains(&q))
+                        .map(|c| (c.id.clone(), c.name.clone(), c.description.clone()))
+                        .collect();
                     egui::ScrollArea::vertical().auto_shrink([false, true]).show(ui, |ui| {
+                        if !local.is_empty() {
+                            egui::CollapsingHeader::new(RichText::new("This schematic").color(c::TEXT_DIM).small())
+                                .id_salt("local-components")
+                                .default_open(true)
+                                .show(ui, |ui| {
+                                    for (id, name, desc) in &local {
+                                        let (row, resp) = ui.allocate_exact_size(vec2(ui.available_width(), 28.0), Sense::click());
+                                        let active = matches!(&self.tool, Tool::Place { def, .. } if def == id);
+                                        if active {
+                                            ui.painter().rect_filled(row, 5.0, c::ACTIVE_TAB_BG);
+                                        } else if resp.hovered() {
+                                            ui.painter().rect_filled(row, 5.0, c::HOVER);
+                                        }
+                                        let thumb = Rect::from_min_size(row.min + vec2(4.0, 3.0), vec2(34.0, 22.0));
+                                        paint_symbol(ui.painter(), thumb, &crate::components::symbol_id(id), if active { c::ACTIVE_TAB_TEXT } else { c::ICON });
+                                        ui.painter().text(row.min + vec2(46.0, 14.0), Align2::LEFT_CENTER, name, theme::regular(13.0), c::TEXT);
+                                        let resp = resp.on_hover_text(format!("{desc}\nClick to place; Ctrl+E on a placed one edits it").trim().to_string());
+                                        if resp.clicked() {
+                                            cmd = Some(Cmd::Tool(Tool::Place { def: id.clone(), rot: 0, mirror: false }));
+                                        }
+                                    }
+                                });
+                        }
                         for (k, cat) in self.cat.categories().iter().enumerate() {
                             let defs: Vec<_> = self
                                 .cat
                                 .category(cat)
                                 .into_iter()
+                                .filter(|d| !d.id.starts_with("local."))
                                 .filter(|d| q.is_empty() || d.meta.name.to_lowercase().contains(&q) || d.id.contains(&q))
                                 .collect();
                             if defs.is_empty() {
@@ -1683,6 +1726,7 @@ impl App {
                     self.edit(Command::SetRefdes { part: id, refdes });
                 }
                 ui.end_row();
+                self.part_number_row(ui, id, &def.id);
                 for p in &def.params {
                     let label = if p.unit.is_empty() {
                         p.name.clone()
@@ -1793,6 +1837,28 @@ impl App {
                 };
                 kv(ui, &p.name, &txt);
             }
+        }
+        if ecs_mcu::is_mcu(&part.def) {
+            ui.add_space(6.0);
+            ui.horizontal(|ui| {
+                if ui
+                    .button(RichText::new("Edit Program…").strong())
+                    .on_hover_text("Assembly source of this chip")
+                    .clicked()
+                {
+                    self.open_program(id);
+                }
+                let lines = part.code.lines().filter(|l| !l.trim().is_empty()).count();
+                ui.label(
+                    RichText::new(if lines == 0 {
+                        "no program: every pin is an input".to_string()
+                    } else {
+                        format!("{lines} lines")
+                    })
+                    .color(c::TEXT_DIM)
+                    .small(),
+                );
+            });
         }
         ui.add_space(6.0);
         ui.horizontal(|ui| {
@@ -2006,7 +2072,10 @@ impl App {
         v.extend(self.built.problems.iter().cloned());
         v.extend(self.sim_warnings.iter().cloned());
         for (id, k) in &self.built.unconnected {
-            if let Some(p) = self.doc.part(*id) {
+            if let Some(p) = self.doc.part(*id)
+                && !p.def.starts_with("mcu.")
+                && !p.def.starts_with("ic.")
+            {
                 let pin = p
                     .symbol()
                     .pins
@@ -2227,6 +2296,19 @@ impl App {
                         ui.end_row();
                         ui.label("");
                         ui.label(RichText::new("Dots speed up by one step per decade of current (1 nA to 1 A); this scales all of them.").color(c::TEXT_DIM).small());
+                        ui.end_row();
+                        ui.label("Current direction");
+                        ui.vertical(|ui| {
+                            ui.radio_value(&mut self.settings.electron_flow, false, "Conventional: + to − (engineering)");
+                            ui.radio_value(&mut self.settings.electron_flow, true, "Electron flow: − to + (physical)");
+                        });
+                        ui.end_row();
+                        ui.label("Resistor symbol");
+                        ui.vertical(|ui| {
+                            ui.radio_value(&mut self.settings.iec_resistors, false, "Zigzag (ANSI / IEEE 315)");
+                            ui.radio_value(&mut self.settings.iec_resistors, true, "Rectangle (IEC 60617)");
+                        });
+                        ecs_schematic::symbols::set_resistor_style(self.settings.iec_resistors);
                         ui.end_row();
                         ui.label("Show");
                         ui.vertical(|ui| {

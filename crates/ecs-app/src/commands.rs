@@ -32,7 +32,7 @@ pub fn catalog() -> Vec<Info> {
         info(
             "file.open_sample",
             "Open a sample circuit",
-            json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | divider"}),
+            json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | pic-blink | divider"}),
         ),
         info("file.save", "Save", none.clone()),
         info(
@@ -91,6 +91,21 @@ pub fn catalog() -> Vec<Info> {
             "schematic.set_param",
             "Set a part parameter",
             json!({"refdes": "string", "name": "string", "value": "engineering notation"}),
+        ),
+        info(
+            "schematic.set_part_number",
+            "Set a part number (known numbers apply their model parameters)",
+            json!({"refdes": "string", "number": "e.g. 2N2222A, 74HC00, PIC16F84A"}),
+        ),
+        info(
+            "schematic.set_program",
+            "Set a microcontroller's program",
+            json!({"refdes": "string", "code": "assembly source"}),
+        ),
+        info(
+            "mcu.edit_program",
+            "Open a microcontroller's program editor",
+            json!({"refdes": "string"}),
         ),
         info(
             "schematic.delete_part",
@@ -265,6 +280,15 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             value: s(args, "value")?,
         },
         "schematic.delete_part" => Cmd::DeletePart(s(args, "refdes")?),
+        "schematic.set_part_number" => Cmd::SetPartNumber {
+            refdes: s(args, "refdes")?,
+            number: s(args, "number")?,
+        },
+        "schematic.set_program" => Cmd::SetProgram {
+            refdes: s(args, "refdes")?,
+            code: s(args, "code")?,
+        },
+        "mcu.edit_program" => Cmd::EditProgram(s(args, "refdes")?),
         "scope.clear" | "schematic.clear_probes" => Cmd::ClearProbes,
         "scope.add" => {
             let expr = s(args, "expr")?;
@@ -347,7 +371,7 @@ mod tests {
         let mut ids = std::collections::BTreeSet::new();
         for i in catalog() {
             assert!(ids.insert(i.id), "duplicate id {}", i.id);
-            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0});
+            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0, "number": "2N2222A", "code": "nop"});
             let args = match i.id {
                 "sim.control" => json!({"refdes": "S1", "state": "closed", "value": 1.0}),
                 "view.dot_speed" => json!({"value": 0.5}),

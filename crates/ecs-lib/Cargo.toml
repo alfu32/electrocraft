@@ -9,6 +9,8 @@ rust-version.workspace = true
 [dependencies]
 ecs-model.workspace = true
 ecs-expr.workspace = true
+ecs-mcu.workspace = true
 
 [dev-dependencies]
 ecs-sim.workspace = true
+ecs-mcu.workspace = true

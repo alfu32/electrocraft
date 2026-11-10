@@ -51,6 +51,12 @@ pub fn all() -> Vec<Sample> {
             build: rc_blocks,
         },
         Sample {
+            id: "pic-blink",
+            title: "PIC Blinker",
+            subtitle: "A PIC16F84A runs its assembly program: RB0 blinks the LED, the toggle on RB1 holds it",
+            build: pic_blink,
+        },
+        Sample {
             id: "divider",
             title: "Potentiometer Divider",
             subtitle: "Drag the wiper slider in the inspector and watch the meter",
@@ -383,6 +389,56 @@ fn rc_blocks(cat: &Catalog) -> Schematic {
     b.finish("Custom Component", 2e-3, 2e-6)
 }
 
+/// A PIC16F84A blinking an LED from its template program.
+fn pic_blink(cat: &Catalog) -> Schematic {
+    let mut b = start(cat);
+    let u1 = b.part("mcu.pic16f84a", [0.0, 0.0], 0, false, &[]);
+    if let Some(p) = b.doc.part_mut(u1) {
+        p.code = ecs_mcu::template("mcu.pic16f84a");
+    }
+    let rb0 = b.pin(u1, "RB0");
+    let rb1 = b.pin(u1, "RB1");
+    let r1 = b.part(
+        "core.resistor",
+        [rb0[0] + 120.0, rb0[1]],
+        0,
+        false,
+        &[("R", "330")],
+    );
+    let (ra, rb) = (b.pin(r1, "A"), b.pin(r1, "B"));
+    b.wire(&[rb0, ra]);
+    let d1 = b.part(
+        "core.led",
+        [rb[0] + 60.0, rb[1] + 40.0],
+        1,
+        false,
+        &[("color", "green")],
+    );
+    let (la, lk) = (b.pin(d1, "A"), b.pin(d1, "K"));
+    b.route(rb, la, true);
+    b.part("core.ground", [lk[0], lk[1] + 40.0], 0, false, &[]);
+    b.wire(&[lk, [lk[0], lk[1] + 40.0]]);
+    // The toggle below, its output facing the chip; the wire stays clear of the other pins.
+    let sw = b.part(
+        "core.logic_toggle",
+        [rb1[0] + 160.0, rb1[1] + 160.0],
+        0,
+        true,
+        &[],
+    );
+    let out = b.pin(sw, "OUT");
+    let x = rb1[0] + 40.0;
+    b.wire(&[rb1, [x, rb1[1]], [x, out[1]], out]);
+    b.label(rb0, "led");
+    b.scope("RB0", "U1.RB0.V");
+    b.scope("LED current", "D1.I");
+    b.note(
+        [-60.0, -140.0],
+        "U1 runs assembly (Edit Program… in the inspector); toggle RB1 high to hold the LED",
+    );
+    b.finish("PIC Blinker", 0.1, 20e-6)
+}
+
 fn divider(cat: &Catalog) -> Schematic {
     let mut b = start(cat);
     b.part("core.vdc", [0.0, 40.0], 0, false, &[("V", "10")]);
@@ -415,10 +471,14 @@ mod tests {
             assert!(problems.is_empty(), "{}: {problems:?}", s.id);
             let built = crate::catalog::build(&cat, &doc);
             assert!(built.problems.is_empty(), "{}: {:?}", s.id, built.problems);
+            // Unused pins of chips are normal.
             let unconnected: Vec<_> = built
                 .unconnected
                 .iter()
-                .filter(|(id, _)| doc.part(*id).is_some())
+                .filter(|(id, _)| {
+                    doc.part(*id)
+                        .is_some_and(|p| !p.def.starts_with("mcu.") && !p.def.starts_with("ic."))
+                })
                 .collect();
             assert!(
                 unconnected.is_empty(),

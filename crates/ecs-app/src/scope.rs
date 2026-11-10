@@ -815,6 +815,8 @@ impl App {
                                 remove = Some(k);
                             }
                             let v = latest.get(k).copied().unwrap_or(f64::NAN);
+                            // Solver residue (1e-19 A) reads as zero.
+                            let v = if v.abs() < 1e-12 { 0.0 } else { v };
                             ui.label(
                                 RichText::new(if v.is_finite() {
                                     ecs_units::format_digits(v, &ch.unit, 3)

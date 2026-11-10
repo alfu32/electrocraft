@@ -235,14 +235,24 @@ fn build() -> BTreeMap<String, Symbol> {
         24.0,
         8.0,
     ));
-    {
-        let mut s = two_pin_h(
-            "potentiometer",
-            vec![poly(&zigzag(), false, false)],
-            24.0,
-            10.0,
-        );
-        s.prims.extend(arrow([0.0, -40.0], [0.0, -10.0]));
+    // IEC 60617 style: a rectangle (`set_resistor_style`).
+    let rect = || {
+        poly(
+            &[[-24.0, -8.0], [24.0, -8.0], [24.0, 8.0], [-24.0, 8.0]],
+            true,
+            false,
+        )
+    };
+    add(two_pin_h("resistor_iec", vec![rect()], 24.0, 10.0));
+    for (id, body) in [
+        ("potentiometer", poly(&zigzag(), false, false)),
+        ("potentiometer_iec", rect()),
+    ] {
+        let mut s = two_pin_h(id, vec![body], 24.0, 10.0);
+        s.prims.extend(arrow(
+            [0.0, -40.0],
+            [0.0, if id.ends_with("_iec") { -8.0 } else { -10.0 }],
+        ));
         s.pins = vec![
             pin("A", [-40.0, 0.0]),
             pin("W", [0.0, -40.0]),
@@ -974,8 +984,24 @@ pub fn exists(id: &str) -> bool {
             .is_some_and(|m| m.contains_key(id))
 }
 
+static IEC_RESISTORS: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Draw resistors and potentiometers as IEC rectangles (`true`) or
+/// ANSI/IEEE zigzags. Pins are the same, so schematics are unaffected.
+pub fn set_resistor_style(iec: bool) {
+    IEC_RESISTORS.store(iec, std::sync::atomic::Ordering::Relaxed);
+}
+
+/// Whether resistors are drawn as rectangles.
+pub fn resistor_style_iec() -> bool {
+    IEC_RESISTORS.load(std::sync::atomic::Ordering::Relaxed)
+}
+
 /// A symbol by id, falling back to a plain box.
 pub fn get(id: &str) -> &'static Symbol {
+    if matches!(id, "resistor" | "potentiometer") && resistor_style_iec() {
+        return &library()[&format!("{id}_iec")];
+    }
     if let Some(m) = DYNAMIC.get()
         && let Ok(m) = m.read()
         && let Some(s) = m.get(id)

@@ -1,7 +1,7 @@
 [package]
 name = "ecs-app"
 description = "Electrocraft desktop application"
-version = "0.1.4"
+version = "0.1.5"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -20,6 +20,7 @@ serde_json.workspace = true
 ecs-schematic.workspace = true
 ecs-sim.workspace = true
 ecs-lib.workspace = true
+ecs-mcu.workspace = true
 ecs-model.workspace = true
 ecs-units.workspace = true
 ecs-script.workspace = true

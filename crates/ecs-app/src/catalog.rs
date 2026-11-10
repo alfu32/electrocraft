@@ -8,7 +8,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Palette categories in display order; others follow alphabetically.
-pub const CATEGORIES: [&str; 13] = [
+pub const CATEGORIES: [&str; 16] = [
     "Passive",
     "Sources",
     "Switches",
@@ -17,6 +17,9 @@ pub const CATEGORIES: [&str; 13] = [
     "Analog ICs",
     "Digital",
     "Digital I/O",
+    "74xx logic",
+    "4000 logic",
+    "Microcontrollers",
     "Indicators",
     "Instruments",
     "Controlled sources",
@@ -24,9 +27,14 @@ pub const CATEGORIES: [&str; 13] = [
     "User",
 ];
 
+/// A microcontroller definition running a program, and its assembly errors.
+type Programmed = (Arc<ComponentDef>, Vec<String>);
+
 /// The component catalog.
 pub struct Catalog {
     pub lib: Library,
+    /// Microcontroller definitions with assembled programs, by (id, source).
+    programs: std::sync::Mutex<std::collections::HashMap<(String, String), Programmed>>,
 }
 
 /// Result of building a netlist from a schematic.
@@ -59,7 +67,37 @@ impl Catalog {
                 lib.insert(crate::packages::ensure_symbol(def));
             }
         }
-        Self { lib }
+        register_ic_symbols();
+        Self {
+            lib,
+            programs: Default::default(),
+        }
+    }
+
+    /// The definition a microcontroller part runs: its program assembled
+    /// (cached by source, so an unchanged program keeps its definition).
+    pub fn programmed(
+        &self,
+        def: &Arc<ComponentDef>,
+        code: &str,
+    ) -> (Arc<ComponentDef>, Vec<String>) {
+        let key = (def.id.clone(), code.to_string());
+        if let Ok(mut m) = self.programs.lock() {
+            if let Some(hit) = m.get(&key) {
+                return hit.clone();
+            }
+            let (d, errors) = ecs_mcu::with_program(def, code);
+            let entry = (
+                Arc::new(d),
+                errors.iter().map(|e| e.to_string()).collect::<Vec<_>>(),
+            );
+            if m.len() > 256 {
+                m.clear();
+            }
+            m.insert(key, entry.clone());
+            return entry;
+        }
+        (def.clone(), Vec::new())
     }
 
     /// Every category present, in display order.
@@ -124,6 +162,9 @@ impl Catalog {
     pub fn new_part(&self, doc: &Schematic, def: &ComponentDef, at: ecs_schematic::P2) -> Part {
         let refdes = doc.next_refdes(&def.meta.prefix);
         let mut p = ecs_schematic::new_part(&def.id, &def.symbol, refdes, at);
+        if let Some(k) = ecs_lib::parts::default_for(&def.id) {
+            p.part_number = k.number.clone();
+        }
         p.def_version = def.meta.version;
         for s in &def.states {
             p.states.insert(s.name.clone(), s.initial);
@@ -175,6 +216,15 @@ pub fn param_text(part: &Part, def: &ComponentDef, name: &str) -> String {
 
 /// The value shown next to a part on the canvas, e.g. `4.7 kΩ`.
 pub fn value_label(part: &Part, def: &ComponentDef) -> String {
+    let v = value_text(part, def);
+    if v.is_empty() {
+        part.part_number.clone()
+    } else {
+        v
+    }
+}
+
+fn value_text(part: &Part, def: &ComponentDef) -> String {
     let main = match def.id.as_str() {
         "core.vsine" => {
             let a = param_value(part, def, "Vamp");
@@ -217,6 +267,26 @@ pub fn value_label(part: &Part, def: &ComponentDef) -> String {
     ecs_units::format(param_value(part, def, main), &p.unit)
 }
 
+/// Boxed symbols for the logic ICs and microcontrollers (inputs left,
+/// outputs right; `>` marks clock inputs).
+fn register_ic_symbols() {
+    use ecs_schematic::symbols;
+    for s in ecs_lib::ics::symbols() {
+        if !symbols::exists(&s.id) {
+            let l: Vec<&str> = s.left.iter().map(String::as_str).collect();
+            let r: Vec<&str> = s.right.iter().map(String::as_str).collect();
+            symbols::register(symbols::boxed(&s.id, &s.title, &l, &r));
+        }
+    }
+    for (id, title, left, right) in ecs_mcu::symbols() {
+        if !symbols::exists(&id) {
+            let l: Vec<&str> = left.iter().map(String::as_str).collect();
+            let r: Vec<&str> = right.iter().map(String::as_str).collect();
+            symbols::register(symbols::boxed(&id, &title, &l, &r));
+        }
+    }
+}
+
 /// Whether a part is a ground symbol.
 pub fn is_ground(cat: &Catalog, part: &Part) -> bool {
     cat.def(&part.def)
@@ -239,6 +309,18 @@ pub fn build(cat: &Catalog, doc: &Schematic) -> Built {
             b.problems
                 .push(format!("{}: unknown component {}", part.refdes, part.def));
             continue;
+        };
+        // Microcontrollers run the part's own program.
+        let programmed;
+        let def = if ecs_mcu::is_mcu(&def.id) {
+            let (d, errors) = cat.programmed(def, &part.code);
+            for e in errors {
+                b.problems.push(format!("{} program {e}", part.refdes));
+            }
+            programmed = d;
+            &programmed
+        } else {
+            def
         };
         // Ground ties nets in connectivity; the oscilloscope reads node
         // voltages without loading the circuit or adding floating nodes.

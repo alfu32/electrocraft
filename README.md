@@ -7,7 +7,9 @@ knobs. Wires are coloured by voltage, dots show current, LEDs glow.
 ![Electrocraft running a transistor multivibrator](docs/screenshots/02-workspace-astable-live.png)
 
 It covers analog and digital parts (gates, flip-flops, counters, a 555, a
-7-segment display), an oscilloscope whose channels are formulas over net and
+7-segment display), 75 standard 74xx and 4000-series logic chips, PIC
+microcontrollers (PIC16, PIC24, PIC32) programmed in assembly in a highlighted
+editor, part numbers that apply real device models (2N2222A, 1N4148, 74HC00…), an oscilloscope whose channels are formulas over net and
 part codes (`out`, `R1.I`, `Q1.C.V * Q1.C.I`; tick them in the inspector, one
 lane per channel, docked or floating), your own components with a drawn symbol
 implemented by a nested schematic or JavaScript (edit any part's component, or
@@ -27,7 +29,7 @@ implementation status of each phase, is in
 
 ```sh
 cargo run --release                      # Start screen
-cargo run --release -- --sample astable  # led-switch, rc-lowpass, astable, counter, rectifier, rc-blocks, divider
+cargo run --release -- --sample astable  # led-switch, rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider
 cargo run --release -- circuit.ecs
 cargo run --release -- --software-canvas # draw the canvas with egui instead of Raylib
 cargo run --release -- --command-catalog # every command id (the future MCP tools)

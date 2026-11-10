@@ -1,0 +1,14 @@
+[package]
+name = "ecs-mcu"
+description = "Microcontrollers for Electrocraft: PIC assemblers and instruction-set simulators"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+ecs-model.workspace = true
+ecs-expr.workspace = true
+
+[dev-dependencies]
+ecs-sim.workspace = true
