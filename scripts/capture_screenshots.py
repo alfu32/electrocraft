@@ -197,6 +197,18 @@ def main():
         s.shot("29-settings.png", wait=2.0)
         s.close()
 
+        # Full-height catalog settings with provider options, without any search.
+        cfg = home / ".config" / "electrocraft"
+        cfg.mkdir(parents=True, exist_ok=True)
+        (cfg / "settings.json").write_text(json.dumps({"catalogs": {
+            "master": True, "enabled": ["jlcpcb", "digikey", "mouser", "tme", "farnell"]}}))
+        s = run("--sample", "astable", commands=[{"id": "app.settings", "args": {}}])
+        s.x("mousemove", 675, 244, "click", 1)
+        s.x("mousemove", 1300, 860)
+        s.shot("36-settings-catalogs.png", wait=1.0)
+        s.close()
+        (cfg / "settings.json").unlink()
+
         # Microcontroller: the PIC sample and its program editor.
         s = run("--sample", "pic-blink")
         s.x("mousemove", 1500, 900)

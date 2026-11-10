@@ -2278,14 +2278,35 @@ impl App {
             "settings" => "Settings",
             _ => "Problems",
         };
-        egui::Window::new(RichText::new(title).font(theme::bold(14.0)))
+        let mut window = egui::Window::new(RichText::new(title).font(theme::bold(14.0)))
             .open(&mut open)
             .collapsible(false)
-            .resizable(false)
-            .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0))
-            .show(ctx, |ui| match which {
+            .resizable(which == "settings")
+            .anchor(Align2::CENTER_CENTER, vec2(0.0, 0.0));
+        if which == "settings" {
+            window = window
+                .default_size(vec2(640.0, 640.0))
+                .min_size(vec2(520.0, 360.0));
+        }
+        window.show(ctx, |ui| match which {
                 "settings" => {
-                    ui.set_width(380.0);
+                    let page_id = ui.make_persistent_id("settings_catalogs");
+                    let mut catalogs = ui.data_mut(|data| data.get_temp::<bool>(page_id).unwrap_or(false));
+                    ui.horizontal(|ui| {
+                        ui.selectable_value(&mut catalogs, false, "Live simulation");
+                        ui.selectable_value(&mut catalogs, true, "Online part catalogs");
+                    });
+                    ui.data_mut(|data| data.insert_temp(page_id, catalogs));
+                    ui.separator();
+                    // Each page gets the full remaining height, including on small screens.
+                    egui::ScrollArea::vertical()
+                        .id_salt(("settings-page", catalogs))
+                        .auto_shrink([false, false])
+                        .show(ui, |ui| {
+                    if catalogs {
+                        self.catalog_settings(ui);
+                        return;
+                    }
                     ui.label(RichText::new("Live simulation").font(theme::bold(13.0)));
                     let before = (self.settings.clone(), self.grid, self.volt_colors, self.current_dots);
                     egui::Grid::new("settings").num_columns(2).spacing(vec2(14.0, 8.0)).show(ui, |ui| {
@@ -2330,12 +2351,7 @@ impl App {
                     }
                     ui.add_space(4.0);
                     ui.label(RichText::new("Saved for next time.").color(c::TEXT_FAINT).small());
-                    ui.add_space(6.0);
-                    egui::CollapsingHeader::new(RichText::new("Online part catalogs").font(theme::bold(13.0)))
-                        .default_open(self.settings.catalogs.master)
-                        .show(ui, |ui| {
-                            egui::ScrollArea::vertical().max_height(440.0).show(ui, |ui| self.catalog_settings(ui));
-                        });
+                    });
                 }
                 "about" => {
                     ui.set_width(380.0);
