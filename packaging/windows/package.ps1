@@ -39,7 +39,8 @@ python (Join-Path $Root 'scripts\release\msix.py') --version $Version --arch $Ar
 if ($LASTEXITCODE -ne 0) { throw 'MSIX manifest generation failed' }
 
 $Kit = 'C:\Program Files (x86)\Windows Kits\10\bin'
-$MakeAppx = Get-ChildItem $Kit -Recurse -Filter makeappx.exe | Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+$HostDir = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64|x64' } else { 'x64' }
+$MakeAppx = Get-ChildItem $Kit -Recurse -Filter makeappx.exe | Where-Object { $_.FullName -match "\\($HostDir)\\" } | Sort-Object FullName -Descending | Select-Object -First 1
 if (-not $MakeAppx) { throw 'Windows SDK makeappx.exe not found' }
 $Msix = Join-Path $Dist "electrocraft-$Version-windows-$Arch.msix"
 & $MakeAppx.FullName pack /d $Stage /p $Msix /o
@@ -53,7 +54,7 @@ if (-not [string]::IsNullOrWhiteSpace($env:ELECTROCRAFT_PFX_B64) -and -not [stri
     [IO.File]::WriteAllBytes($Pfx, [Convert]::FromBase64String($env:ELECTROCRAFT_PFX_B64))
     $Certificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new($Pfx, $env:ELECTROCRAFT_PFX_PASSWORD, [Security.Cryptography.X509Certificates.X509KeyStorageFlags]::EphemeralKeySet)
     if (-not $Certificate.HasPrivateKey -or $Certificate.Subject -cne $Identity.publisher) { throw 'Signing certificate does not match the reserved Store publisher' }
-    $SignTool = Get-ChildItem $Kit -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match '\\x64\\' } | Sort-Object FullName -Descending | Select-Object -First 1
+    $SignTool = Get-ChildItem $Kit -Recurse -Filter signtool.exe | Where-Object { $_.FullName -match "\\($HostDir)\\" } | Sort-Object FullName -Descending | Select-Object -First 1
     & $SignTool.FullName sign /fd SHA256 /a /f $Pfx /p $env:ELECTROCRAFT_PFX_PASSWORD /tr http://timestamp.digicert.com /td SHA256 $Msix
     if ($LASTEXITCODE -ne 0) { throw 'MSIX signing failed' }
     $Cer = Join-Path $Dist "electrocraft-$Version-windows-$Arch.cer"

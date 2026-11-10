@@ -111,7 +111,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { runner: windows-2022, target: x86_64-pc-windows-msvc }
+          - { runner: windows-2022, target: x86_64-pc-windows-msvc, msix: x64 }
+          - { runner: windows-11-arm, target: aarch64-pc-windows-msvc, msix: arm64 }
           # Same images as Meshcraft's release (macos-13 and macos-14 are retired).
           - { runner: macos-26, target: aarch64-apple-darwin }
           - { runner: macos-15-intel, target: x86_64-apple-darwin }
@@ -130,7 +131,7 @@ jobs:
         env:
           ELECTROCRAFT_PFX_B64: ${{ secrets.ELECTROCRAFT_PFX_B64 }}
           ELECTROCRAFT_PFX_PASSWORD: ${{ secrets.ELECTROCRAFT_PFX_PASSWORD }}
-        run: ./packaging/windows/package.ps1 -Arch x64 -Version "${{ needs.tag.outputs.version }}"
+        run: ./packaging/windows/package.ps1 -Arch ${{ matrix.msix }} -Version "${{ needs.tag.outputs.version }}"
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-${{ matrix.target }}

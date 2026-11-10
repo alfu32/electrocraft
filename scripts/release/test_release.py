@@ -35,6 +35,12 @@ class MsixTests(unittest.TestCase):
         self.assertEqual(root.find(".//rescap:Capability", ns).get("Name"), "runFullTrust")
         for logo in ("StoreLogo", "Square44x44Logo", "Square150x150Logo"):
             self.assertIn(f"Assets\\{logo}.png", msix.manifest("0.1.6", "x64"))
+        arm = ET.fromstring(msix.manifest("0.1.6", "arm64").split("\n", 1)[1]).find("m:Identity", ns)
+        self.assertEqual(arm.get("ProcessorArchitecture"), "arm64")
+        self.assertEqual(msix.msix_name("0.1.6", "arm64"), "electrocraft-0.1.6-windows-arm64.msix")
+        workflow = (common.ROOT / ".github/workflows/release.yaml").read_text()
+        self.assertIn("windows-11-arm", workflow)
+        self.assertIn("msix: arm64", workflow)
         package = (common.ROOT / "packaging/windows/package.ps1").read_text()
         for logo in ("StoreLogo", "Square44x44Logo", "Square150x150Logo"):
             self.assertIn(logo, package)
