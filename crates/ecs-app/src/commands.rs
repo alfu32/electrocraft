@@ -34,7 +34,16 @@ pub fn catalog() -> Vec<Info> {
             "Open a sample circuit",
             json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | pic-blink | divider"}),
         ),
-        info("file.save", "Save", none.clone()),
+        info(
+            "file.save",
+            "Save (an untitled document needs file.save_path)",
+            none.clone(),
+        ),
+        info(
+            "file.save_path",
+            "Save the active document to a .ecs file",
+            json!({"path": "string ending in .ecs"}),
+        ),
         info(
             "file.save_all",
             "Save every modified document",
@@ -111,6 +120,36 @@ pub fn catalog() -> Vec<Info> {
             "schematic.delete_part",
             "Delete a part",
             json!({"refdes": "string"}),
+        ),
+        info(
+            "schematic.label",
+            "Add a net label (labels with the same name are connected; GND is ground)",
+            json!({"name": "string", "x": "number", "y": "number"}),
+        ),
+        info(
+            "schematic.text",
+            "Add a text note",
+            json!({"text": "string", "x": "number", "y": "number"}),
+        ),
+        info(
+            "schematic.move_part",
+            "Move a part to a position; wires attached to its pins stretch",
+            json!({"refdes": "string", "x": "number", "y": "number"}),
+        ),
+        info(
+            "schematic.orient_part",
+            "Set a part's rotation (quarter turns clockwise) and optionally mirroring",
+            json!({"refdes": "string", "rot": "0..3", "mirror": "optional boolean as true or false"}),
+        ),
+        info(
+            "schematic.delete_wire",
+            "Delete a wire by its id (ids are listed by document_describe)",
+            json!({"wire_id": "wire id, integer"}),
+        ),
+        info(
+            "schematic.select",
+            "Select parts (for edit.copy, edit.rotate, ...); empty clears the selection",
+            json!({"refdes": "optional designators, comma-separated"}),
         ),
         info(
             "scope.add",
@@ -280,6 +319,7 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             Cmd::OpenSample(sample.id)
         }
         "file.save" => Cmd::Save,
+        "file.save_path" => Cmd::SavePath(s(args, "path")?.into()),
         "file.save_all" => Cmd::SaveAll,
         "file.close" => Cmd::CloseTab(args["index"].as_u64().map(|k| k as usize)),
         "file.switch_tab" => {
@@ -308,11 +348,21 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
         },
         "schematic.wire" => {
             let pts = args["points"].as_array().ok_or("points must be an array")?;
-            Cmd::AddWire(
-                pts.iter()
-                    .map(|p| [p[0].as_f64().unwrap_or(0.0), p[1].as_f64().unwrap_or(0.0)])
-                    .collect(),
-            )
+            let pts: Vec<[f64; 2]> = pts
+                .iter()
+                .map(|p| [p[0].as_f64().unwrap_or(0.0), p[1].as_f64().unwrap_or(0.0)])
+                .collect();
+            // Wires are orthogonal: a diagonal pair gets a horizontal-first elbow.
+            let mut out: Vec<[f64; 2]> = Vec::new();
+            for p in pts {
+                match out.last().copied() {
+                    Some(last) if last[0] != p[0] && last[1] != p[1] => {
+                        out.extend(ecs_schematic::route(last, p, true).into_iter().skip(1));
+                    }
+                    _ => out.push(p),
+                }
+            }
+            Cmd::AddWire(out)
         }
         "schematic.set_param" => Cmd::SetParam {
             refdes: s(args, "refdes")?,
@@ -320,6 +370,29 @@ pub fn from_id(id: &str, args: &Value) -> Result<Cmd, String> {
             value: s(args, "value")?,
         },
         "schematic.delete_part" => Cmd::DeletePart(s(args, "refdes")?),
+        "schematic.label" => Cmd::Label {
+            name: s(args, "name")?,
+            at: [n(args, "x")?, n(args, "y")?],
+        },
+        "schematic.text" => Cmd::Text {
+            text: s(args, "text")?,
+            at: [n(args, "x")?, n(args, "y")?],
+        },
+        "schematic.move_part" => Cmd::MovePart {
+            refdes: s(args, "refdes")?,
+            at: [n(args, "x")?, n(args, "y")?],
+        },
+        "schematic.orient_part" => Cmd::OrientPart {
+            refdes: s(args, "refdes")?,
+            rot: args["rot"].as_u64().ok_or("missing integer argument rot")? as u8,
+            mirror: args["mirror"].as_bool(),
+        },
+        "schematic.delete_wire" => Cmd::DeleteWire(
+            args["wire_id"]
+                .as_u64()
+                .ok_or("missing integer argument wire_id")?,
+        ),
+        "schematic.select" => Cmd::SelectParts(args["refdes"].as_str().unwrap_or("").to_string()),
         "schematic.set_part_number" => Cmd::SetPartNumber {
             refdes: s(args, "refdes")?,
             number: s(args, "number")?,
@@ -432,7 +505,7 @@ mod tests {
         let mut ids = std::collections::BTreeSet::new();
         for i in catalog() {
             assert!(ids.insert(i.id), "duplicate id {}", i.id);
-            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0, "number": "2N2222A", "code": "nop", "query": "10k"});
+            let args = json!({"path": "x.ecs", "id": "astable", "def": "core.resistor", "x": 0.0, "y": 0.0, "points": [[0, 0], [20, 0]], "refdes": "R1", "name": "R", "value": "1k", "state": "closed", "kind": "tran", "panel": "scopes", "expr": "R1.I", "index": 0, "number": "2N2222A", "code": "nop", "query": "10k", "text": "note", "wire_id": 1, "rot": 1});
             let args = match i.id {
                 "sim.control" => json!({"refdes": "S1", "state": "closed", "value": 1.0}),
                 "view.dot_speed" => json!({"value": 0.5}),

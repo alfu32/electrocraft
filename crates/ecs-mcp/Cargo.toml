@@ -1,0 +1,11 @@
+[package]
+name = "ecs-mcp"
+description = "Model Context Protocol server (stdio) for Electrocraft: tools, manual tool and resources"
+edition.workspace = true
+license.workspace = true
+version.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }

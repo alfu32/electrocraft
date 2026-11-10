@@ -205,6 +205,33 @@ pub enum Cmd {
     ExportBom,
     /// Export the bill of materials to a file (plus one per preferred vendor).
     ExportBomPath(PathBuf),
+    /// Add a net label.
+    Label {
+        name: String,
+        at: P2,
+    },
+    /// Add a text note.
+    Text {
+        text: String,
+        at: P2,
+    },
+    /// Move a part to a position (attached wires stretch).
+    MovePart {
+        refdes: String,
+        at: P2,
+    },
+    /// Set a part's rotation (quarter turns clockwise) and optionally its mirroring.
+    OrientPart {
+        refdes: String,
+        rot: u8,
+        mirror: Option<bool>,
+    },
+    /// Delete a wire by id.
+    DeleteWire(Id),
+    /// Select parts by designator (comma-separated; empty clears).
+    SelectParts(String),
+    /// Save the active document to a path (`.ecs`).
+    SavePath(PathBuf),
 }
 
 /// A document open in a tab. The active tab's state lives in [`App`]'s own
@@ -336,6 +363,8 @@ pub struct App {
     pub package_problems: Vec<String>,
     /// Online part catalogs (Parts panel, sourcing lookups).
     pub parts: crate::parts_ui::PartsUi,
+    /// Tool calls from an MCP client (`--mcp`), run between frames.
+    pub mcp: Option<std::sync::mpsc::Receiver<crate::mcp::Job>>,
 }
 
 const MAX_SCOPE: usize = 60_000;
@@ -432,6 +461,7 @@ impl App {
             user_lib: Default::default(),
             package_problems: Vec::new(),
             parts: Default::default(),
+            mcp: None,
         };
         app.settings = crate::settings::Settings::load();
         app.grid = app.settings.grid;
@@ -1426,8 +1456,10 @@ impl App {
                 Some(d) => {
                     let mut p = self.cat.new_part(&self.doc, &d, at);
                     p.rot = rot % 4;
+                    let refdes = p.refdes.clone();
                     let created = self.edit(Command::AddPart(Box::new(p)));
                     self.selection = created.into_iter().collect();
+                    self.status = format!("Placed {refdes}");
                 }
                 None => self.status = format!("Unknown component {def}"),
             },
@@ -1479,10 +1511,84 @@ impl App {
                     _ => "The datasheet tool (electrocraft-datasheet) was not found beside Electrocraft".into(),
                 };
             }
-            Cmd::DeletePart(refdes) => {
-                if let Some(p) = self.doc.parts.iter().find(|p| p.refdes == refdes) {
+            Cmd::DeletePart(refdes) => match self.doc.parts.iter().find(|p| p.refdes == refdes) {
+                Some(p) => {
                     let id = p.id;
                     self.edit(Command::Delete([Item::Part(id)].into()));
+                    self.status = format!("Deleted {refdes}");
+                }
+                None => self.status = format!("No part {refdes}"),
+            },
+            Cmd::Label { name, at } => {
+                self.edit(Command::AddLabel {
+                    at: snap(at),
+                    name: name.clone(),
+                });
+                self.status = format!("Label {name} added");
+            }
+            Cmd::Text { text, at } => {
+                self.edit(Command::AddNote { at: snap(at), text });
+                self.status = "Text added".into();
+            }
+            Cmd::MovePart { refdes, at } => {
+                match self.doc.parts.iter().find(|p| p.refdes == refdes) {
+                    Some(p) => {
+                        let (id, to) = (p.id, snap(at));
+                        let delta = [to[0] - p.pos[0], to[1] - p.pos[1]];
+                        self.edit(Command::Move {
+                            items: [Item::Part(id)].into(),
+                            delta,
+                        });
+                        self.status = format!("Moved {refdes} to {}, {}", to[0], to[1]);
+                    }
+                    None => self.status = format!("No part {refdes}"),
+                }
+            }
+            Cmd::OrientPart {
+                refdes,
+                rot,
+                mirror,
+            } => match self.doc.parts.iter().find(|p| p.refdes == refdes) {
+                Some(p) => {
+                    let (id, cur, flipped) = (p.id, p.rot % 4, p.mirror);
+                    for _ in 0..(rot % 4 + 4 - cur) % 4 {
+                        self.edit(Command::Rotate([Item::Part(id)].into()));
+                    }
+                    if mirror.is_some_and(|m| m != flipped) {
+                        self.edit(Command::Mirror([Item::Part(id)].into()));
+                    }
+                    self.status = format!("Oriented {refdes}");
+                }
+                None => self.status = format!("No part {refdes}"),
+            },
+            Cmd::DeleteWire(id) => {
+                if self.doc.wires.iter().any(|w| w.id == id) {
+                    self.edit(Command::Delete([Item::Wire(id)].into()));
+                    self.status = format!("Deleted wire {id}");
+                } else {
+                    self.status = format!("No wire {id}");
+                }
+            }
+            Cmd::SelectParts(list) => {
+                let wanted: Vec<&str> = list
+                    .split(',')
+                    .map(str::trim)
+                    .filter(|r| !r.is_empty())
+                    .collect();
+                self.selection = self
+                    .doc
+                    .parts
+                    .iter()
+                    .filter(|p| wanted.contains(&p.refdes.as_str()))
+                    .map(|p| Item::Part(p.id))
+                    .collect();
+                self.status = format!("{} part(s) selected", self.selection.len());
+            }
+            Cmd::SavePath(p) => {
+                if p.extension().is_some_and(|e| e == "ecs") {
+                    self.save_to(p);
+                } else {
+                    self.status = "Schematics are saved as .ecs files".into();
                 }
             }
         }

@@ -14,6 +14,7 @@ mod component_ui;
 mod components;
 mod icons;
 mod import_ui;
+mod mcp;
 mod packages;
 mod parts_ui;
 mod program_ui;
@@ -52,6 +53,7 @@ impl eframe::App for Shell {
         }
         app.poll_sim();
         app.poll_catalogs();
+        app.poll_mcp(&ctx);
         app.sync_sim(false);
         app.shortcuts(&ctx);
         if app.status != self.status_seen {
@@ -193,7 +195,7 @@ fn main() -> eframe::Result {
     }
     if args.iter().any(|a| a == "--help" || a == "-h") {
         println!(
-            "usage: electrocraft [file.ecs] [--new] [--sample <id>] [--software-canvas] [--size WxH] [--commands file.json] [--command-catalog] [--version]"
+            "usage: electrocraft [file.ecs] [--new] [--sample <id>] [--software-canvas] [--size WxH] [--commands file.json] [--command-catalog] [--mcp] [--version]"
         );
         println!(
             "samples: {}",
@@ -232,6 +234,11 @@ fn main() -> eframe::Result {
         .map(|(_, a)| PathBuf::from(a));
     let new = args.iter().any(|a| a == "--new");
 
+    // --mcp: an MCP client drives this window over stdio. The protocol takes
+    // the real stdout before anything else can print to it.
+    let mcp_out = args.iter().any(|a| a == "--mcp").then(mcp::take_stdout);
+    let mut mcp_out = mcp_out;
+
     let options = eframe::NativeOptions {
         renderer: eframe::Renderer::Glow,
         viewport: egui::ViewportBuilder::default()
@@ -248,6 +255,9 @@ fn main() -> eframe::Result {
         Box::new(move |cc| {
             theme::install(&cc.egui_ctx);
             let mut app = App::new(software);
+            if let Some(out) = mcp_out.take() {
+                app.mcp = Some(mcp::start(cc.egui_ctx.clone(), out));
+            }
             if let Some(p) = file {
                 app.run(Cmd::OpenPath(p), &cc.egui_ctx);
             } else if let Some(s) = sample {

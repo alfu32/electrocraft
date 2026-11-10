@@ -19,7 +19,7 @@ analyses with plots, SPICE model and subcircuit import, online part catalogs
 (JLCPCB/LCSC, DigiKey, Mouser, TME, Farnell: search, place real parts with
 their values, keep a preferred vendor per part and export a bill of materials;
 off until you enable a provider in Settings, keys kept in the system keychain),
-and a companion tool that fits models to datasheet curves.
+an MCP server (`electrocraft --mcp`: agents place, wire, run and read circuits in your open window, with a built-in manual), and a companion tool that fits models to datasheet curves.
 
 Electrocraft is a native Rust app: an egui shell in SolidCraft's visual
 language, a Raylib off-screen canvas operated like Wirecraft's, and a modified
@@ -35,7 +35,8 @@ cargo run --release                      # Start screen
 cargo run --release -- --sample astable  # led-switch, rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider
 cargo run --release -- circuit.ecs
 cargo run --release -- --software-canvas # draw the canvas with egui instead of Raylib
-cargo run --release -- --command-catalog # every command id (the future MCP tools)
+cargo run --release -- --command-catalog # every command id (the MCP tools)
+cargo run --release -- --mcp             # MCP server on stdio: {"mcpServers": {"electrocraft": {"command": "electrocraft", "args": ["--mcp"]}}}
 cargo run --release -- --sample rc-lowpass --commands run-ac.json   # [{"id": "analysis.run", "args": {"kind": "ac"}}]
 cargo run --release -p datasheet-tool -- --example npn             # datasheet model fitting
 ```

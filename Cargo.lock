@@ -1007,11 +1007,12 @@ dependencies = [
 
 [[package]]
 name = "ecs-app"
-version = "0.1.11"
+version = "0.1.12"
 dependencies = [
  "ecs-catalog",
  "ecs-expr",
  "ecs-lib",
+ "ecs-mcp",
  "ecs-mcu",
  "ecs-model",
  "ecs-render",
@@ -1068,6 +1069,14 @@ dependencies = [
  "ecs-mcu",
  "ecs-model",
  "ecs-sim",
+]
+
+[[package]]
+name = "ecs-mcp"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

@@ -1,7 +1,7 @@
 [package]
 name = "ecs-app"
 description = "Electrocraft desktop application"
-version = "0.1.11"
+version = "0.1.12"
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
@@ -27,5 +27,6 @@ ecs-script.workspace = true
 ecs-spice.workspace = true
 ecs-expr.workspace = true
 ecs-catalog.workspace = true
+ecs-mcp.workspace = true
 egui_plot.workspace = true
 image.workspace = true
