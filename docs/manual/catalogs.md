@@ -5,10 +5,13 @@ bill of materials.
 ## Consent comes first
 
 Catalogs are **off** until the user turns on "Allow online part catalogs" and a
-provider in Settings (with a confirmation naming what is sent). You cannot change
-this, and there is no tool for it. If `parts_search` says catalogs are off, tell the
+provider in **Settings → Online part catalogs** (with a confirmation naming what is
+sent). You cannot change this, and there is no tool for it. If `parts_search` says catalogs are off, tell the
 user which Settings page to open; do not retry. Keys live in the system keychain.
 Only JLCPCB works without a key; the others need the user's own keys.
+
+The catalog tab fills the resizable Settings dialog; scroll to reach further
+providers, credential fields and regional options.
 
 ## Searching
 
