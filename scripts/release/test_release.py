@@ -7,6 +7,37 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import common  # noqa: E402
 import snap  # noqa: E402
+import msix  # noqa: E402
+import xml.etree.ElementTree as ET  # noqa: E402
+
+
+class MsixTests(unittest.TestCase):
+    def test_store_identity_and_version_mapping(self):
+        ident = msix.identity()
+        self.assertEqual(ident["identityName"], "K3D0.electrocraft")
+        self.assertTrue(ident["packageFamilyName"].startswith("K3D0.electrocraft_"))
+        self.assertEqual(msix.package_version("0.1.6", ident), "1.1.6.0")
+        self.assertEqual(msix.package_version("2.10.3", ident), "3.10.3.0")
+        with self.assertRaises(ValueError):
+            msix.package_version("1.2", ident)
+        self.assertEqual(msix.msix_name("0.1.6", "x64"), "electrocraft-0.1.6-windows-x64.msix")
+
+    def test_manifest_has_identity_full_trust_and_file_type(self):
+        ns = {"m": msix.NS[""], "uap": msix.NS["uap"], "rescap": msix.NS["rescap"]}
+        root = ET.fromstring(msix.manifest("0.1.6", "x64").split("\n", 1)[1])
+        ident = root.find("m:Identity", ns)
+        self.assertEqual(ident.get("Name"), "K3D0.electrocraft")
+        self.assertEqual(ident.get("Publisher"), msix.identity()["publisher"])
+        self.assertEqual(ident.get("Version"), "1.1.6.0")
+        app = root.find("m:Applications/m:Application", ns)
+        self.assertEqual((app.get("Executable"), app.get("EntryPoint")), ("electrocraft.exe", "Windows.FullTrustApplication"))
+        self.assertEqual(root.find(".//uap:FileType", ns).text, ".ecs")
+        self.assertEqual(root.find(".//rescap:Capability", ns).get("Name"), "runFullTrust")
+        for logo in ("StoreLogo", "Square44x44Logo", "Square150x150Logo"):
+            self.assertIn(f"Assets\\{logo}.png", msix.manifest("0.1.6", "x64"))
+        package = (common.ROOT / "packaging/windows/package.ps1").read_text()
+        for logo in ("StoreLogo", "Square44x44Logo", "Square150x150Logo"):
+            self.assertIn(logo, package)
 
 
 class SnapTests(unittest.TestCase):

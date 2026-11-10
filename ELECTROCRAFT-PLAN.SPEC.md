@@ -4,7 +4,7 @@ Nov 9, 2026 · @Asdfghjkar · revised Nov 9, 2026 for look and feel, canvas oper
 
 ![Electrocraft running a transistor multivibrator live](docs/screenshots/02-workspace-astable-live.png)
 
-*Electrocraft 0.1.5: an astable multivibrator running live, with scope channels on Q2's collector and base (`Q2.C.V`, `Q2.B.V`). Wires are coloured by voltage, yellow dots show current, the LEDs glow in proportion to their current. Screenshots in this document are captured from the real application by `scripts/capture_screenshots.py`.*
+*Electrocraft 0.1.6: an astable multivibrator running live, with scope channels on Q2's collector and base (`Q2.C.V`, `Q2.B.V`). Wires are coloured by voltage, yellow dots show current, the LEDs glow in proportion to their current. Screenshots in this document are captured from the real application by `scripts/capture_screenshots.py`.*
 
 ## 1. Overview & goals
 
@@ -688,7 +688,7 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.5** (Nov 10, 2026):
+**Status at 0.1.6** (Nov 10, 2026):
 
 | Phase | Status | Done | Remaining |
 | --- | --- | --- | --- |
@@ -786,7 +786,7 @@ Releases follow Meshcraft: a manual workflow (`.github/workflows/release.yaml`) 
 | --- | --- | --- |
 | Linux x86_64 / aarch64 | AppImage (+ `.zsync`), portable `tar.gz` | Scripted and verified locally on x86_64 |
 | Linux | Snap (`core24`, `mesa-2404` GPU content, strict, `grade: stable`), DEB, RPM | Snap `electrocraft_X.Y.Z_<amd64|arm64>.snap` built in the release workflow (the job installs the bundled libraries' packages first; 0.1.4 failed for lack of them) by `scripts/release/snap.py`: the three binaries (apps `electrocraft`, `electrocraft.cli`, `electrocraft.datasheet`), the windowing libraries that neither core24 nor mesa-2404 provide (Xcursor, Xrandr, Xi, Xinerama, Xrender, xkbcommon-x11, xcb-xkb, with their dependencies) and the XKB data; the job installs it with core24 and mesa-2404, checks `--version`, and runs the app under Xvfb (still running after 15 s, a painted screenshot). Store upload is not automated. DEB and RPM still to port from Meshcraft |
-| Windows x64 / ARM64 | Portable `zip`; MSI; MSIX with the reserved Store identity (`packaging/windows/store-identity.json`: `K3D0.electrocraft`) | Portable zip in the workflow (the app links with `/FORCE:MULTIPLE` because raylib and user32 both export `CloseWindow` and `ShowCursor`; see `crates/ecs-app/build.rs`); MSI and MSIX still to port |
+| Windows x64 / ARM64 | Portable `zip`; MSI; MSIX with the reserved Store identity (`packaging/windows/store-identity.json`: `K3D0.electrocraft`) | `electrocraft-X.Y.Z-windows-x64.msix` built in the release workflow by `packaging/windows/package.ps1` from the portable zip: `scripts/release/msix.py` writes the AppxManifest (identity `K3D0.electrocraft`, package version = app version with the major offset by 1 because the Store needs major ≥ 1, full-trust desktop app, `.ecs` file association, tile logos from the icon), `makeappx` packs it; with `ELECTROCRAFT_PFX_B64`/`ELECTROCRAFT_PFX_PASSWORD` secrets it is signed (certificate subject must equal the Store publisher), test-installed, launched with `--version` and removed, and the `.cer` is published; without them it is published unsigned for Partner Center upload. Portable zip in the workflow (the app links with `/FORCE:MULTIPLE` because raylib and user32 both export `CloseWindow` and `ShowCursor`; see `crates/ecs-app/build.rs`); MSI and MSIX still to port |
 | macOS Intel / Apple Silicon | Portable `zip`; DMG | Portable zip in the workflow; DMG still to port |
 
 **AppGlider compatibility.** AppGlider installs from GitHub releases and reads each AppImage's own files. Electrocraft releases are shaped to its rules (checked by `scripts/release/appimage.py` after every build and by `test_release.py`):

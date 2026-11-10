@@ -23,6 +23,7 @@ python3 -m unittest discover -s scripts/release -p 'test_*.py'
 python3 scripts/capture_screenshots.py              # needs a release build, Xvfb, xdotool, ImageMagick
 python3 scripts/release/appimage.py                 # AppGlider-friendly AppImage into dist/
 python3 scripts/release/snap.py                     # strict core24 snap into dist/ (needs snapd, mksquashfs)
+python3 scripts/release/msix.py --output AppxManifest.xml   # MSIX manifest; packaging/windows/package.ps1 packs/signs on Windows
 ```
 
 `default-members` is only `crates/ecs-app`: pass `--workspace` or `-p` for the rest.
