@@ -1,0 +1,1 @@
+Teken elektroniese stroombane en simuleer hulle intyds met Electrocraft. Volg spannings, strome en golfvorms op die ossilloskoop. Ontleed analoog- en digitale stroombane, voer SPICE-modelle in en skryf samesteltaalprogramme vir ondersteunde PIC-mikrobeheerders. Die koppelvlak is in Engels. Aanlyn onderdelekatalogusse is opsioneel en by verstek afgeskakel.

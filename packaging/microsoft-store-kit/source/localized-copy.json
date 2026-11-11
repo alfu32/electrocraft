@@ -1,0 +1,326 @@
+{
+  "af": {
+    "language": "Afrikaans",
+    "locale": "af",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Teken elektroniese stroombane en simuleer hulle intyds met Electrocraft.",
+    "Description": "Teken elektroniese stroombane en simuleer hulle intyds met Electrocraft. Volg spannings, strome en golfvorms op die ossilloskoop. Ontleed analoog- en digitale stroombane, voer SPICE-modelle in en skryf samesteltaalprogramme vir ondersteunde PIC-mikrobeheerders. Die koppelvlak is in Engels. Aanlyn onderdelekatalogusse is opsioneel en by verstek afgeskakel.",
+    "DevStudio": "K3D0"
+  },
+  "ar": {
+    "language": "العربية",
+    "locale": "ar",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "ارسم الدوائر الإلكترونية وحاكِها في الوقت الفعلي باستخدام Electrocraft.",
+    "Description": "ارسم الدوائر الإلكترونية وحاكِها في الوقت الفعلي باستخدام Electrocraft. تابع الجهد والتيار وأشكال الموجات باستخدام راسم الذبذبات. حلّل الدوائر التناظرية والرقمية، واستورد نماذج SPICE، وبرمج متحكمات PIC المدعومة بلغة التجميع. واجهة التطبيق باللغة الإنجليزية. كتالوجات القطع عبر الإنترنت اختيارية ومعطّلة افتراضيًا.",
+    "DevStudio": "K3D0"
+  },
+  "bg": {
+    "language": "Български",
+    "locale": "bg",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Чертайте електронни схеми и ги симулирайте в реално време с Electrocraft.",
+    "Description": "Чертайте електронни схеми и ги симулирайте в реално време с Electrocraft. Наблюдавайте напрежения, токове и форми на сигнала с осцилоскопа. Анализирайте аналогови и цифрови схеми, импортирайте SPICE модели и програмирайте поддържаните PIC микроконтролери на асемблер. Интерфейсът е на английски. Онлайн каталозите за компоненти са по избор и са изключени по подразбиране.",
+    "DevStudio": "K3D0"
+  },
+  "zh": {
+    "language": "中文",
+    "locale": "zh",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "使用 Electrocraft 绘制电子电路原理图，并实时模拟电路运行。",
+    "Description": "使用 Electrocraft 绘制电子电路原理图，并实时模拟电路运行。通过示波器查看电压、电流和波形。分析模拟与数字电路，导入 SPICE 模型，并用汇编语言为受支持的 PIC 微控制器编程。应用界面为英语。在线元器件目录可按需启用，默认关闭。",
+    "DevStudio": "K3D0"
+  },
+  "cs": {
+    "language": "Čeština",
+    "locale": "cs",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Kreslete elektronická schémata a simulujte obvody v reálném čase s Electrocraftem.",
+    "Description": "Kreslete elektronická schémata a simulujte obvody v reálném čase s Electrocraftem. Na osciloskopu sledujte napětí, proudy a průběhy signálů. Analyzujte analogové i digitální obvody, importujte modely SPICE a programujte podporované mikrokontroléry PIC v assembleru. Rozhraní je v angličtině. Online katalogy součástek jsou volitelné a ve výchozím nastavení vypnuté.",
+    "DevStudio": "K3D0"
+  },
+  "da": {
+    "language": "Dansk",
+    "locale": "da",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Tegn kredsløbsdiagrammer og simulér elektroniske kredsløb i realtid med Electrocraft.",
+    "Description": "Tegn kredsløbsdiagrammer og simulér elektroniske kredsløb i realtid med Electrocraft. Følg spændinger, strømme og signalforløb på oscilloskopet. Analysér analoge og digitale kredsløb, importér SPICE-modeller, og programmér understøttede PIC-mikrocontrollere i assemblersprog. Brugerfladen er på engelsk. Online komponentkataloger er valgfrie og slået fra som standard.",
+    "DevStudio": "K3D0"
+  },
+  "nl": {
+    "language": "Nederlands",
+    "locale": "nl",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Teken elektronische schema’s en simuleer schakelingen in realtime met Electrocraft.",
+    "Description": "Teken elektronische schema’s en simuleer schakelingen in realtime met Electrocraft. Bekijk spanningen, stromen en golfvormen op de oscilloscoop. Analyseer analoge en digitale schakelingen, importeer SPICE-modellen en programmeer ondersteunde PIC-microcontrollers in assembleertaal. De interface is Engelstalig. Online onderdelencatalogi zijn optioneel en staan standaard uit.",
+    "DevStudio": "K3D0"
+  },
+  "et": {
+    "language": "Eesti",
+    "locale": "et",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Joonista Electrocraftiga elektroonikaskeeme ja simuleeri vooluringe reaalajas.",
+    "Description": "Joonista Electrocraftiga elektroonikaskeeme ja simuleeri vooluringe reaalajas. Jälgi ostsilloskoobil pingeid, voolutugevusi ja signaalikujusid. Analüüsi analoog- ja digitaalahelaid, impordi SPICE-mudeleid ning programmeeri toetatud PIC-mikrokontrollereid assemblerkeeles. Kasutajaliides on ingliskeelne. Veebipõhised komponendikataloogid on valikulised ja vaikimisi välja lülitatud.",
+    "DevStudio": "K3D0"
+  },
+  "fil": {
+    "language": "Filipino",
+    "locale": "fil",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Gumuhit ng mga eskema ng elektronikong circuit at gayahin ang takbo ng mga ito sa real time gamit ang Electrocraft.",
+    "Description": "Gumuhit ng mga eskema ng elektronikong circuit at gayahin ang takbo ng mga ito sa real time gamit ang Electrocraft. Subaybayan ang boltahe, daloy ng kuryente at mga waveform sa oscilloscope. Suriin ang analog at digital na mga circuit, mag-import ng mga modelong SPICE at magprograma sa assembly language para sa mga suportadong PIC microcontroller. Ingles ang interface. Opsyonal at naka-off bilang default ang mga online na katalogo ng piyesa.",
+    "DevStudio": "K3D0"
+  },
+  "fi": {
+    "language": "Suomi",
+    "locale": "fi",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Piirrä kytkentäkaavioita ja simuloi elektroniikkapiirejä reaaliajassa Electrocraftilla.",
+    "Description": "Piirrä kytkentäkaavioita ja simuloi elektroniikkapiirejä reaaliajassa Electrocraftilla. Tarkastele jännitteitä, virtoja ja aaltomuotoja oskilloskoopilla. Analysoi analogisia ja digitaalisia piirejä, tuo SPICE-malleja ja ohjelmoi tuettuja PIC-mikro-ohjaimia assemblykielellä. Käyttöliittymä on englanninkielinen. Verkossa olevat komponenttiluettelot ovat valinnaisia ja oletusarvoisesti pois käytöstä.",
+    "DevStudio": "K3D0"
+  },
+  "fr": {
+    "language": "Français",
+    "locale": "fr",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Dessinez des schémas électroniques et simulez vos circuits en temps réel avec Electrocraft.",
+    "Description": "Dessinez des schémas électroniques et simulez vos circuits en temps réel avec Electrocraft. Observez les tensions, les courants et les formes d’onde à l’oscilloscope. Analysez des circuits analogiques et numériques, importez des modèles SPICE et programmez en assembleur les microcontrôleurs PIC pris en charge. L’interface est en anglais. Les catalogues de composants en ligne sont facultatifs et désactivés par défaut.",
+    "DevStudio": "K3D0"
+  },
+  "de": {
+    "language": "Deutsch",
+    "locale": "de",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Zeichnen Sie elektronische Schaltpläne und simulieren Sie Schaltungen in Echtzeit mit Electrocraft.",
+    "Description": "Zeichnen Sie elektronische Schaltpläne und simulieren Sie Schaltungen in Echtzeit mit Electrocraft. Beobachten Sie Spannungen, Ströme und Signalverläufe am Oszilloskop. Analysieren Sie analoge und digitale Schaltungen, importieren Sie SPICE-Modelle und programmieren Sie unterstützte PIC-Mikrocontroller in Assemblersprache. Die Benutzeroberfläche ist auf Englisch. Online-Bauteilkataloge sind optional und standardmäßig deaktiviert.",
+    "DevStudio": "K3D0"
+  },
+  "el": {
+    "language": "Ελληνικά",
+    "locale": "el",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Σχεδιάστε ηλεκτρονικά κυκλώματα και προσομοιώστε τη λειτουργία τους σε πραγματικό χρόνο με το Electrocraft.",
+    "Description": "Σχεδιάστε ηλεκτρονικά κυκλώματα και προσομοιώστε τη λειτουργία τους σε πραγματικό χρόνο με το Electrocraft. Παρακολουθήστε τάσεις, ρεύματα και κυματομορφές στον παλμογράφο. Αναλύστε αναλογικά και ψηφιακά κυκλώματα, εισαγάγετε μοντέλα SPICE και προγραμματίστε τους υποστηριζόμενους μικροελεγκτές PIC σε γλώσσα assembly. Το περιβάλλον χρήσης είναι στα αγγλικά. Οι διαδικτυακοί κατάλογοι εξαρτημάτων είναι προαιρετικοί και απενεργοποιημένοι από προεπιλογή.",
+    "DevStudio": "K3D0"
+  },
+  "he": {
+    "language": "עברית",
+    "locale": "he",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "שרטטו מעגלים אלקטרוניים והדמו את פעולתם בזמן אמת באמצעות Electrocraft.",
+    "Description": "שרטטו מעגלים אלקטרוניים והדמו את פעולתם בזמן אמת באמצעות Electrocraft. עקבו אחר מתחים, זרמים וצורות גל באוסצילוסקופ. נתחו מעגלים אנלוגיים ודיגיטליים, ייבאו מודלים של SPICE ותכנתו מיקרו־בקרים נתמכים ממשפחת PIC בשפת אסמבלי. ממשק היישום באנגלית. קטלוגי רכיבים מקוונים הם אופציונליים ומושבתים כברירת מחדל.",
+    "DevStudio": "K3D0"
+  },
+  "hi": {
+    "language": "हिन्दी",
+    "locale": "hi",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft में इलेक्ट्रॉनिक सर्किट के आरेख बनाएँ और उनका रियल टाइम सिमुलेशन करें। ऑसिलोस्कोप पर वोल्टेज, धारा और तरंगरूप देखें। एनालॉग और डिजिटल सर्किट का विश्लेषण करें, SPICE मॉडल आयात करें और समर्थित PIC माइक्रोकंट्रोलर के लिए असेंबली भाषा में प्रोग्राम लिखें। ऐप का इंटरफ़ेस अंग्रेज़ी में है। ऑनलाइन पुर्जा कैटलॉग वैकल्पिक हैं और डिफ़ॉल्ट रूप से बंद रहते हैं।.",
+    "Description": "Electrocraft में इलेक्ट्रॉनिक सर्किट के आरेख बनाएँ और उनका रियल टाइम सिमुलेशन करें। ऑसिलोस्कोप पर वोल्टेज, धारा और तरंगरूप देखें। एनालॉग और डिजिटल सर्किट का विश्लेषण करें, SPICE मॉडल आयात करें और समर्थित PIC माइक्रोकंट्रोलर के लिए असेंबली भाषा में प्रोग्राम लिखें। ऐप का इंटरफ़ेस अंग्रेज़ी में है। ऑनलाइन पुर्जा कैटलॉग वैकल्पिक हैं और डिफ़ॉल्ट रूप से बंद रहते हैं।",
+    "DevStudio": "K3D0"
+  },
+  "is": {
+    "language": "Íslenska",
+    "locale": "is",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Teiknaðu rafrásateikningar og hermdu eftir virkni rafrása í rauntíma með Electrocraft.",
+    "Description": "Teiknaðu rafrásateikningar og hermdu eftir virkni rafrása í rauntíma með Electrocraft. Fylgstu með spennu, straumi og bylgjuformum á sveiflusjánni. Greindu hliðrænar og stafrænar rásir, flyttu inn SPICE-líkön og forritaðu studda PIC-örstýra á smalamáli. Notendaviðmótið er á ensku. Íhlutaskrár á netinu eru valfrjálsar og sjálfgefið óvirkar.",
+    "DevStudio": "K3D0"
+  },
+  "it": {
+    "language": "Italiano",
+    "locale": "it",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Disegna schemi elettronici e simula i circuiti in tempo reale con Electrocraft.",
+    "Description": "Disegna schemi elettronici e simula i circuiti in tempo reale con Electrocraft. Osserva tensioni, correnti e forme d’onda sull’oscilloscopio. Analizza circuiti analogici e digitali, importa modelli SPICE e programma in assembly i microcontrollori PIC supportati. L’interfaccia è in inglese. I cataloghi online dei componenti sono facoltativi e disattivati per impostazione predefinita.",
+    "DevStudio": "K3D0"
+  },
+  "ja": {
+    "language": "日本語",
+    "locale": "ja",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft で電子回路図を作成し、回路の動作をリアルタイムにシミュレーションできます。",
+    "Description": "Electrocraft で電子回路図を作成し、回路の動作をリアルタイムにシミュレーションできます。オシロスコープで電圧、電流、波形を確認できます。アナログ回路とデジタル回路の解析、SPICE モデルの読み込み、対応する PIC マイクロコントローラーのアセンブリ言語によるプログラミングが可能です。アプリのインターフェイスは英語です。オンライン部品カタログはオプションで、初期設定では無効です。",
+    "DevStudio": "K3D0"
+  },
+  "kk": {
+    "language": "Қазақша",
+    "locale": "kk",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft көмегімен электрондық сұлбаларды сызып, тізбектердің жұмысын нақты уақытта модельдеңіз.",
+    "Description": "Electrocraft көмегімен электрондық сұлбаларды сызып, тізбектердің жұмысын нақты уақытта модельдеңіз. Осциллографтан кернеуді, токты және сигнал пішіндерін бақылаңыз. Аналогтық және цифрлық тізбектерді талдаңыз, SPICE үлгілерін импорттаңыз және қолдау көрсетілетін PIC микроконтроллерлерін ассемблер тілінде бағдарламалаңыз. Интерфейс ағылшын тілінде. Бөлшектердің онлайн каталогтарын қалауыңызша қосуға болады, олар әдепкіде өшірулі.",
+    "DevStudio": "K3D0"
+  },
+  "ko": {
+    "language": "한국어",
+    "locale": "ko",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft로 전자 회로도를 그리고 회로의 동작을 실시간으로 시뮬레이션하세요.",
+    "Description": "Electrocraft로 전자 회로도를 그리고 회로의 동작을 실시간으로 시뮬레이션하세요. 오실로스코프에서 전압, 전류, 파형을 확인할 수 있습니다. 아날로그 및 디지털 회로를 분석하고 SPICE 모델을 가져오며 지원되는 PIC 마이크로컨트롤러를 어셈블리어로 프로그래밍할 수 있습니다. 앱 인터페이스는 영어입니다. 온라인 부품 카탈로그는 선택 사항이며 기본적으로 꺼져 있습니다.",
+    "DevStudio": "K3D0"
+  },
+  "lv": {
+    "language": "Latviešu",
+    "locale": "lv",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Zīmējiet elektroniskās shēmas un simulējiet ķēdes reāllaikā ar Electrocraft.",
+    "Description": "Zīmējiet elektroniskās shēmas un simulējiet ķēdes reāllaikā ar Electrocraft. Osciloskopā vērojiet spriegumu, strāvu un signālu formas. Analizējiet analogās un digitālās ķēdes, importējiet SPICE modeļus un programmējiet atbalstītos PIC mikrokontrollerus asamblervalodā. Lietotāja saskarne ir angļu valodā. Tiešsaistes komponentu katalogi ir pieejami pēc izvēles un pēc noklusējuma izslēgti.",
+    "DevStudio": "K3D0"
+  },
+  "lt": {
+    "language": "Lietuvių",
+    "locale": "lt",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Bražykite elektronines schemas ir modeliuokite grandines realiuoju laiku su „Electrocraft“.",
+    "Description": "Bražykite elektronines schemas ir modeliuokite grandines realiuoju laiku su „Electrocraft“. Osciloskopu stebėkite įtampą, srovę ir signalų formas. Analizuokite analogines ir skaitmenines grandines, importuokite SPICE modelius ir asemblerio kalba programuokite palaikomus PIC mikrovaldiklius. Programos sąsaja anglų kalba. Internetiniai komponentų katalogai yra neprivalomi ir pagal numatytąsias nuostatas išjungti.",
+    "DevStudio": "K3D0"
+  },
+  "no": {
+    "language": "Norsk",
+    "locale": "no",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Tegn elektroniske kretsskjemaer og simuler kretser i sanntid med Electrocraft.",
+    "Description": "Tegn elektroniske kretsskjemaer og simuler kretser i sanntid med Electrocraft. Følg spenninger, strømmer og bølgeformer på oscilloskopet. Analyser analoge og digitale kretser, importer SPICE-modeller og programmer støttede PIC-mikrokontrollere i assemblerspråk. Brukergrensesnittet er på engelsk. Nettbaserte komponentkataloger er valgfrie og slått av som standard.",
+    "DevStudio": "K3D0"
+  },
+  "fa": {
+    "language": "فارسی",
+    "locale": "fa",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "با Electrocraft نقشهٔ مدارهای الکترونیکی را رسم کنید و عملکرد آن‌ها را به‌صورت بلادرنگ شبیه‌سازی کنید.",
+    "Description": "با Electrocraft نقشهٔ مدارهای الکترونیکی را رسم کنید و عملکرد آن‌ها را به‌صورت بلادرنگ شبیه‌سازی کنید. ولتاژ، جریان و شکل موج‌ها را روی اسیلوسکوپ ببینید. مدارهای آنالوگ و دیجیتال را تحلیل کنید، مدل‌های SPICE را وارد کنید و میکروکنترلرهای PIC پشتیبانی‌شده را با زبان اسمبلی برنامه‌نویسی کنید. رابط برنامه انگلیسی است. کاتالوگ‌های آنلاین قطعات اختیاری‌اند و به‌طور پیش‌فرض غیرفعال هستند.",
+    "DevStudio": "K3D0"
+  },
+  "pl": {
+    "language": "Polski",
+    "locale": "pl",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Rysuj schematy elektroniczne i symuluj obwody w czasie rzeczywistym w Electrocraft.",
+    "Description": "Rysuj schematy elektroniczne i symuluj obwody w czasie rzeczywistym w Electrocraft. Obserwuj napięcia, prądy i przebiegi na oscyloskopie. Analizuj obwody analogowe i cyfrowe, importuj modele SPICE i programuj obsługiwane mikrokontrolery PIC w asemblerze. Interfejs jest w języku angielskim. Katalogi podzespołów online są opcjonalne i domyślnie wyłączone.",
+    "DevStudio": "K3D0"
+  },
+  "pa": {
+    "language": "ਪੰਜਾਬੀ",
+    "locale": "pa",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft ਨਾਲ ਇਲੈਕਟ੍ਰਾਨਿਕ ਸਰਕਟਾਂ ਦੇ ਚਿੱਤਰ ਬਣਾਓ ਅਤੇ ਉਨ੍ਹਾਂ ਦੀ ਕਾਰਗੁਜ਼ਾਰੀ ਦਾ ਰੀਅਲ ਟਾਈਮ ਵਿੱਚ ਸਿਮੂਲੇਸ਼ਨ ਕਰੋ। ਓਸੀਲੋਸਕੋਪ ਉੱਤੇ ਵੋਲਟੇਜ, ਕਰੰਟ ਅਤੇ ਤਰੰਗਾਂ ਦੇ ਆਕਾਰ ਵੇਖੋ। ਐਨਾਲਾਗ ਅਤੇ ਡਿਜੀਟਲ ਸਰਕਟਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ, SPICE ਮਾਡਲ ਆਯਾਤ ਕਰੋ ਅਤੇ ਸਮਰਥਿਤ PIC ਮਾਈਕ੍ਰੋਕੰਟਰੋਲਰਾਂ ਲਈ ਅਸੈਂਬਲੀ ਭਾਸ਼ਾ ਵਿੱਚ ਪ੍ਰੋਗਰਾਮ ਲਿਖੋ। ਐਪ ਦਾ ਇੰਟਰਫੇਸ ਅੰਗਰੇਜ਼ੀ ਵਿੱਚ ਹੈ। ਪੁਰਜ਼ਿਆਂ ਦੇ ਆਨਲਾਈਨ ਕੈਟਾਲਾਗ ਵਿਕਲਪਿਕ ਹਨ ਅਤੇ ਮੂਲ ਰੂਪ ਵਿੱਚ ਬੰਦ ਹਨ।.",
+    "Description": "Electrocraft ਨਾਲ ਇਲੈਕਟ੍ਰਾਨਿਕ ਸਰਕਟਾਂ ਦੇ ਚਿੱਤਰ ਬਣਾਓ ਅਤੇ ਉਨ੍ਹਾਂ ਦੀ ਕਾਰਗੁਜ਼ਾਰੀ ਦਾ ਰੀਅਲ ਟਾਈਮ ਵਿੱਚ ਸਿਮੂਲੇਸ਼ਨ ਕਰੋ। ਓਸੀਲੋਸਕੋਪ ਉੱਤੇ ਵੋਲਟੇਜ, ਕਰੰਟ ਅਤੇ ਤਰੰਗਾਂ ਦੇ ਆਕਾਰ ਵੇਖੋ। ਐਨਾਲਾਗ ਅਤੇ ਡਿਜੀਟਲ ਸਰਕਟਾਂ ਦਾ ਵਿਸ਼ਲੇਸ਼ਣ ਕਰੋ, SPICE ਮਾਡਲ ਆਯਾਤ ਕਰੋ ਅਤੇ ਸਮਰਥਿਤ PIC ਮਾਈਕ੍ਰੋਕੰਟਰੋਲਰਾਂ ਲਈ ਅਸੈਂਬਲੀ ਭਾਸ਼ਾ ਵਿੱਚ ਪ੍ਰੋਗਰਾਮ ਲਿਖੋ। ਐਪ ਦਾ ਇੰਟਰਫੇਸ ਅੰਗਰੇਜ਼ੀ ਵਿੱਚ ਹੈ। ਪੁਰਜ਼ਿਆਂ ਦੇ ਆਨਲਾਈਨ ਕੈਟਾਲਾਗ ਵਿਕਲਪਿਕ ਹਨ ਅਤੇ ਮੂਲ ਰੂਪ ਵਿੱਚ ਬੰਦ ਹਨ।",
+    "DevStudio": "K3D0"
+  },
+  "ro": {
+    "language": "Română",
+    "locale": "ro",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Desenează scheme electronice și simulează circuite în timp real cu Electrocraft.",
+    "Description": "Desenează scheme electronice și simulează circuite în timp real cu Electrocraft. Urmărește tensiunile, curenții și formele de undă pe osciloscop. Analizează circuite analogice și digitale, importă modele SPICE și programează în limbaj de asamblare microcontrolerele PIC compatibile. Interfața este în limba engleză. Cataloagele online de componente sunt opționale și dezactivate implicit.",
+    "DevStudio": "K3D0"
+  },
+  "ru-ua": {
+    "language": "Русский",
+    "locale": "ru-ua",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Создавайте электронные схемы и моделируйте работу цепей в реальном времени в Electrocraft.",
+    "Description": "Создавайте электронные схемы и моделируйте работу цепей в реальном времени в Electrocraft. Наблюдайте напряжения, токи и формы сигналов на осциллографе. Анализируйте аналоговые и цифровые цепи, импортируйте модели SPICE и программируйте поддерживаемые микроконтроллеры PIC на языке ассемблера. Интерфейс приложения на английском языке. Онлайн-каталоги компонентов можно включить по желанию, по умолчанию они отключены.",
+    "DevStudio": "K3D0"
+  },
+  "sr-latn": {
+    "language": "Srpski (latinica)",
+    "locale": "sr-latn",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Crtajte elektronske šeme i simulirajte kola u realnom vremenu uz Electrocraft.",
+    "Description": "Crtajte elektronske šeme i simulirajte kola u realnom vremenu uz Electrocraft. Pratite napone, struje i talasne oblike na osciloskopu. Analizirajte analogna i digitalna kola, uvezite SPICE modele i programirajte podržane PIC mikrokontrolere na asemblerskom jeziku. Korisnički interfejs je na engleskom. Katalozi komponenti na internetu su opcioni i podrazumevano isključeni.",
+    "DevStudio": "K3D0"
+  },
+  "sk": {
+    "language": "Slovenčina",
+    "locale": "sk",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Kreslite elektronické schémy a simulujte obvody v reálnom čase s aplikáciou Electrocraft.",
+    "Description": "Kreslite elektronické schémy a simulujte obvody v reálnom čase s aplikáciou Electrocraft. Na osciloskope sledujte napätia, prúdy a priebehy signálov. Analyzujte analógové aj digitálne obvody, importujte modely SPICE a programujte podporované mikrokontroléry PIC v assembleri. Rozhranie je v angličtine. Online katalógy súčiastok sú voliteľné a predvolene vypnuté.",
+    "DevStudio": "K3D0"
+  },
+  "es": {
+    "language": "Español",
+    "locale": "es",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Dibuja esquemas electrónicos y simula circuitos en tiempo real con Electrocraft.",
+    "Description": "Dibuja esquemas electrónicos y simula circuitos en tiempo real con Electrocraft. Observa tensiones, corrientes y formas de onda en el osciloscopio. Analiza circuitos analógicos y digitales, importa modelos SPICE y programa en ensamblador los microcontroladores PIC compatibles. La interfaz está en inglés. Los catálogos de componentes en línea son opcionales y están desactivados de forma predeterminada.",
+    "DevStudio": "K3D0"
+  },
+  "sv": {
+    "language": "Svenska",
+    "locale": "sv",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Rita elektroniska kretsscheman och simulera kretsar i realtid med Electrocraft.",
+    "Description": "Rita elektroniska kretsscheman och simulera kretsar i realtid med Electrocraft. Följ spänningar, strömmar och vågformer i oscilloskopet. Analysera analoga och digitala kretsar, importera SPICE-modeller och programmera PIC-mikrokontroller som stöds i assemblerspråk. Gränssnittet är på engelska. Komponentkataloger på nätet är valfria och avstängda som standard.",
+    "DevStudio": "K3D0"
+  },
+  "th": {
+    "language": "ไทย",
+    "locale": "th",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "วาดแผนผังวงจรอิเล็กทรอนิกส์และจำลองการทำงานแบบเรียลไทม์ด้วย Electrocraft",
+    "Description": "วาดแผนผังวงจรอิเล็กทรอนิกส์และจำลองการทำงานแบบเรียลไทม์ด้วย Electrocraft ดูแรงดัน กระแส และรูปคลื่นบนออสซิลโลสโคป วิเคราะห์วงจรแอนะล็อกและดิจิทัล นำเข้าแบบจำลอง SPICE และเขียนโปรแกรมภาษาแอสเซมบลีสำหรับไมโครคอนโทรลเลอร์ PIC ที่รองรับ ส่วนติดต่อของแอปเป็นภาษาอังกฤษ แค็ตตาล็อกชิ้นส่วนออนไลน์เป็นตัวเลือกและปิดไว้ตามค่าเริ่มต้น",
+    "DevStudio": "K3D0"
+  },
+  "tr": {
+    "language": "Türkçe",
+    "locale": "tr",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Electrocraft ile elektronik devre şemaları çizin ve devreleri gerçek zamanlı olarak simüle edin.",
+    "Description": "Electrocraft ile elektronik devre şemaları çizin ve devreleri gerçek zamanlı olarak simüle edin. Osiloskopta gerilimleri, akımları ve dalga biçimlerini izleyin. Analog ve dijital devreleri analiz edin, SPICE modellerini içe aktarın ve desteklenen PIC mikrodenetleyicileri assembly diliyle programlayın. Uygulama arayüzü İngilizcedir. Çevrimiçi parça katalogları isteğe bağlıdır ve varsayılan olarak kapalıdır.",
+    "DevStudio": "K3D0"
+  },
+  "uk": {
+    "language": "Українська",
+    "locale": "uk",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Кресліть електронні схеми й моделюйте роботу кіл у реальному часі в Electrocraft.",
+    "Description": "Кресліть електронні схеми й моделюйте роботу кіл у реальному часі в Electrocraft. Спостерігайте за напругою, струмом і формами сигналів на осцилографі. Аналізуйте аналогові та цифрові кола, імпортуйте моделі SPICE і програмуйте підтримувані мікроконтролери PIC мовою асемблера. Інтерфейс застосунку англійською мовою. Онлайн-каталоги компонентів можна ввімкнути за потреби, типово вони вимкнені.",
+    "DevStudio": "K3D0"
+  },
+  "vi": {
+    "language": "Tiếng Việt",
+    "locale": "vi",
+    "translation_status": "draft",
+    "Title": "Electrocraft",
+    "ShortDescription": "Vẽ sơ đồ điện tử và mô phỏng mạch theo thời gian thực với Electrocraft.",
+    "Description": "Vẽ sơ đồ điện tử và mô phỏng mạch theo thời gian thực với Electrocraft. Theo dõi điện áp, dòng điện và dạng sóng trên máy hiện sóng. Phân tích mạch tương tự và mạch số, nhập mô hình SPICE và lập trình hợp ngữ cho các vi điều khiển PIC được hỗ trợ. Giao diện ứng dụng bằng tiếng Anh. Danh mục linh kiện trực tuyến là tùy chọn và được tắt theo mặc định.",
+    "DevStudio": "K3D0"
+  }
+}

@@ -1,0 +1,1 @@
+Joonista Electrocraftiga elektroonikaskeeme ja simuleeri vooluringe reaalajas. Jälgi ostsilloskoobil pingeid, voolutugevusi ja signaalikujusid. Analüüsi analoog- ja digitaalahelaid, impordi SPICE-mudeleid ning programmeeri toetatud PIC-mikrokontrollereid assemblerkeeles. Kasutajaliides on ingliskeelne. Veebipõhised komponendikataloogid on valikulised ja vaikimisi välja lülitatud.

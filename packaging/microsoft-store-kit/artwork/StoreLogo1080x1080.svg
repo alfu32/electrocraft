@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" viewBox="0 0 1080 1080">
+<title>Electrocraft Store artwork</title>
+<defs>
+ <linearGradient id="canvas" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#2c3547"/><stop offset="1" stop-color="#141820"/></linearGradient>
+ <radialGradient id="halo"><stop stop-color="#67b7f0" stop-opacity=".18"/><stop offset="1" stop-color="#67b7f0" stop-opacity="0"/></radialGradient>
+ <pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M48 0H0V48" fill="none" stroke="#a8c6e6" stroke-opacity=".055" stroke-width="1"/></pattern>
+</defs>
+<rect width="1080" height="1080" fill="url(#canvas)"/><rect width="1080" height="1080" fill="url(#grid)"/><ns0:svg xmlns:ns0="http://www.w3.org/2000/svg" width="432.0" height="432.0" viewBox="0 0 512 512" x="324.0" y="64.8">
+  <ns0:title>Electrocraft</ns0:title>
+  <ns0:defs>
+    <ns0:linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <ns0:stop offset="0" stop-color="#2C3547" />
+      <ns0:stop offset="1" stop-color="#161A22" />
+    </ns0:linearGradient>
+    <ns0:linearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
+      <ns0:stop offset="0" stop-color="#8FD0FF" />
+      <ns0:stop offset="1" stop-color="#2F6FD6" />
+    </ns0:linearGradient>
+    <ns0:radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <ns0:stop offset="0" stop-color="#FFE066" stop-opacity="0.85" />
+      <ns0:stop offset="1" stop-color="#FFE066" stop-opacity="0" />
+    </ns0:radialGradient>
+  </ns0:defs>
+  <ns0:rect x="24" y="24" width="464" height="464" rx="104" fill="url(#bg)" />
+  <ns0:rect x="25.5" y="25.5" width="461" height="461" rx="102.5" fill="none" stroke="#3D4658" stroke-width="3" />
+  
+  <ns0:path d="M206 112 H120 Q104 112 104 128 V384 Q104 400 120 400 H392 Q408 400 408 384 V128 Q408 112 392 112 H352" fill="none" stroke="#52E07E" stroke-width="16" stroke-linecap="round" />
+  <ns0:path d="M206 112 L220 86 L242 138 L264 86 L286 138 L308 86 L330 138 L352 112" fill="none" stroke="#C7D3E3" stroke-width="14" stroke-linecap="round" stroke-linejoin="round" />
+  <ns0:circle cx="104" cy="256" r="16" fill="#8FB8E0" />
+  <ns0:circle cx="408" cy="256" r="16" fill="#8FB8E0" />
+  
+  <ns0:circle cx="104" cy="186" r="9" fill="#FFE066" />
+  <ns0:circle cx="104" cy="330" r="9" fill="#FFE066" />
+  <ns0:circle cx="190" cy="400" r="9" fill="#FFE066" />
+  <ns0:circle cx="322" cy="400" r="9" fill="#FFE066" />
+  <ns0:circle cx="408" cy="330" r="9" fill="#FFE066" />
+  <ns0:circle cx="408" cy="186" r="9" fill="#FFE066" />
+  
+  <ns0:circle cx="256" cy="268" r="118" fill="url(#glow)" />
+  <ns0:path d="M286 152 L196 284 H252 L224 384 L322 240 H266 L296 152 Z" fill="url(#bolt)" stroke="#DDF0FF" stroke-width="6" stroke-linejoin="round" />
+</ns0:svg>
+<text x="540.0" y="637.1999999999999" fill="#eef4ff" font-family="Inter, sans-serif" font-weight="600" font-size="98.28" text-anchor="middle">Electrocraft</text>
+<path d="M194.4 702.0H885.5999999999999" stroke="#67b7f0" stroke-width="3" stroke-opacity=".65"/>
+</svg>

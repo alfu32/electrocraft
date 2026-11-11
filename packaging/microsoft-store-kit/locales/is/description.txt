@@ -1,0 +1,1 @@
+Teiknaðu rafrásateikningar og hermdu eftir virkni rafrása í rauntíma með Electrocraft. Fylgstu með spennu, straumi og bylgjuformum á sveiflusjánni. Greindu hliðrænar og stafrænar rásir, flyttu inn SPICE-líkön og forritaðu studda PIC-örstýra á smalamáli. Notendaviðmótið er á ensku. Íhlutaskrár á netinu eru valfrjálsar og sjálfgefið óvirkar.

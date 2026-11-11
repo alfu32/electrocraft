@@ -1,0 +1,1 @@
+Kreslite elektronické schémy a simulujte obvody v reálnom čase s aplikáciou Electrocraft. Na osciloskope sledujte napätia, prúdy a priebehy signálov. Analyzujte analógové aj digitálne obvody, importujte modely SPICE a programujte podporované mikrokontroléry PIC v assembleri. Rozhranie je v angličtine. Online katalógy súčiastok sú voliteľné a predvolene vypnuté.

@@ -116,6 +116,8 @@ pub enum Cmd {
     SaveAll,
     /// The settings dialog.
     Settings,
+    McpStart,
+    McpStop,
     /// Open a microcontroller's program editor.
     EditProgram(String),
     /// Set a part's program (assembly source).
@@ -365,6 +367,7 @@ pub struct App {
     pub parts: crate::parts_ui::PartsUi,
     /// Tool calls from an MCP client (`--mcp`), run between frames.
     pub mcp: Option<std::sync::mpsc::Receiver<crate::mcp::Job>>,
+    pub mcp_network: crate::mcp_http::NetworkMcp,
 }
 
 const MAX_SCOPE: usize = 60_000;
@@ -462,6 +465,7 @@ impl App {
             package_problems: Vec::new(),
             parts: Default::default(),
             mcp: None,
+            mcp_network: crate::mcp_http::NetworkMcp::default(),
         };
         app.settings = crate::settings::Settings::load();
         app.grid = app.settings.grid;
@@ -1258,6 +1262,8 @@ impl App {
             Cmd::Shortcuts => self.dialog = Some("shortcuts"),
             Cmd::About => self.dialog = Some("about"),
             Cmd::Settings => self.dialog = Some("settings"),
+            Cmd::McpStart => self.mcp_network.start(&self.settings.mcp, ctx),
+            Cmd::McpStop => self.mcp_network.stop(),
             Cmd::PartsPanel => self.parts.open = !self.parts.open,
             Cmd::PartsSearch { query, provider } => {
                 self.parts.open = true;

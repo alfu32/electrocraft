@@ -1,0 +1,1 @@
+Tegn elektroniske kretsskjemaer og simuler kretser i sanntid med Electrocraft. Følg spenninger, strømmer og bølgeformer på oscilloskopet. Analyser analoge og digitale kretser, importer SPICE-modeller og programmer støttede PIC-mikrokontrollere i assemblerspråk. Brukergrensesnittet er på engelsk. Nettbaserte komponentkataloger er valgfrie og slått av som standard.

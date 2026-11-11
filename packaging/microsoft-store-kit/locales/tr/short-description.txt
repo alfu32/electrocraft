@@ -1,0 +1,1 @@
+Electrocraft ile elektronik devre şemaları çizin ve devreleri gerçek zamanlı olarak simüle edin.

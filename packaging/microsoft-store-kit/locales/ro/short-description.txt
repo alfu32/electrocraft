@@ -1,0 +1,1 @@
+Desenează scheme electronice și simulează circuite în timp real cu Electrocraft.

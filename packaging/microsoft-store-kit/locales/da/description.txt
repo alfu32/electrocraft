@@ -1,0 +1,1 @@
+Tegn kredsløbsdiagrammer og simulér elektroniske kredsløb i realtid med Electrocraft. Følg spændinger, strømme og signalforløb på oscilloskopet. Analysér analoge og digitale kredsløb, importér SPICE-modeller, og programmér understøttede PIC-mikrocontrollere i assemblersprog. Brugerfladen er på engelsk. Online komponentkataloger er valgfrie og slået fra som standard.

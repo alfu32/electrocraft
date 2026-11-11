@@ -1,0 +1,4 @@
+Windows 10 version 1809 (build 17763) or later; Windows 11
+x64 or ARM64 Windows PC
+OpenGL-capable graphics driver; software-canvas fallback available
+Keyboard and pointing device; application window at least 960 × 600

@@ -1,0 +1,1 @@
+Rysuj schematy elektroniczne i symuluj obwody w czasie rzeczywistym w Electrocraft. Obserwuj napięcia, prądy i przebiegi na oscyloskopie. Analizuj obwody analogowe i cyfrowe, importuj modele SPICE i programuj obsługiwane mikrokontrolery PIC w asemblerze. Interfejs jest w języku angielskim. Katalogi podzespołów online są opcjonalne i domyślnie wyłączone.

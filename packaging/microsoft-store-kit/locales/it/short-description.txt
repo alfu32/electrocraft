@@ -1,0 +1,1 @@
+Disegna schemi elettronici e simula i circuiti in tempo reale con Electrocraft.

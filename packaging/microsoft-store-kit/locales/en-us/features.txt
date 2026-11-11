@@ -1,0 +1,12 @@
+Draw and wire analog and digital schematics with undo and multiple document tabs
+Watch live voltages, current dots, glowing LEDs, switches and potentiometers
+Probe waveforms with formula-based oscilloscope channels and cursors
+Run DC operating point, DC sweep, transient and AC analyses
+Build with analog parts, logic gates and 74xx/4000-series logic ICs
+Program supported PIC12, PIC16, PIC24 and PIC32 microcontrollers in assembly
+Create custom components with nested schematics or JavaScript equations
+Import SPICE models and subcircuits and export SPICE netlists
+Find parts in optional supplier catalogs, track sourcing and export CSV bills of materials
+Fit device models to datasheet curves with the companion datasheet tool
+Control the running app from compatible MCP clients using the optional stdio server
+Explore built-in circuits and save editable .ecs schematic documents

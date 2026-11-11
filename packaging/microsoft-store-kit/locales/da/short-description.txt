@@ -1,0 +1,1 @@
+Tegn kredsløbsdiagrammer og simulér elektroniske kredsløb i realtid med Electrocraft.

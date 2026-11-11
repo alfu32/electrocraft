@@ -1,0 +1,192 @@
+[
+  {
+    "locale": "en-us",
+    "language": "English (United States)",
+    "translation_status": "source"
+  },
+  {
+    "locale": "af",
+    "language": "Afrikaans",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "ar",
+    "language": "العربية",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "bg",
+    "language": "Български",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "zh",
+    "language": "中文",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "cs",
+    "language": "Čeština",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "da",
+    "language": "Dansk",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "nl",
+    "language": "Nederlands",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "en",
+    "language": "English",
+    "translation_status": "copied from en-us"
+  },
+  {
+    "locale": "et",
+    "language": "Eesti",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "fil",
+    "language": "Filipino",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "fi",
+    "language": "Suomi",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "fr",
+    "language": "Français",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "de",
+    "language": "Deutsch",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "el",
+    "language": "Ελληνικά",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "he",
+    "language": "עברית",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "hi",
+    "language": "हिन्दी",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "is",
+    "language": "Íslenska",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "it",
+    "language": "Italiano",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "ja",
+    "language": "日本語",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "kk",
+    "language": "Қазақша",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "ko",
+    "language": "한국어",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "lv",
+    "language": "Latviešu",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "lt",
+    "language": "Lietuvių",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "no",
+    "language": "Norsk",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "fa",
+    "language": "فارسی",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "pl",
+    "language": "Polski",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "pa",
+    "language": "ਪੰਜਾਬੀ",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "ro",
+    "language": "Română",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "ru-ua",
+    "language": "Русский",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "sr-latn",
+    "language": "Srpski (latinica)",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "sk",
+    "language": "Slovenčina",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "es",
+    "language": "Español",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "sv",
+    "language": "Svenska",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "th",
+    "language": "ไทย",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "tr",
+    "language": "Türkçe",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "uk",
+    "language": "Українська",
+    "translation_status": "draft"
+  },
+  {
+    "locale": "vi",
+    "language": "Tiếng Việt",
+    "translation_status": "draft"
+  }
+]
