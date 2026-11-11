@@ -55,6 +55,23 @@ class DirectoryImportTests(unittest.TestCase):
         with self.assertRaisesRegex(AssertionError, 'must be flat'):
             self.check()
 
+    def test_rejects_screenshot_slots_above_ten_including_default(self):
+        self.template.append([
+            'DesktopScreenshot11', '110',
+            'Relative path (or URL to file in Partner Center)', '', '',
+        ])
+        for default in (False, True):
+            with self.subTest(default=default):
+                self.write_reference('microsoft-store/shot.png')
+                with self.csv.open('a', encoding='utf-8', newline='') as stream:
+                    csv.writer(stream).writerow(
+                        self.template[-1][:3] +
+                        (['microsoft-store/shot.png', ''] if default else
+                         ['', 'microsoft-store/shot.png'])
+                    )
+                with self.assertRaisesRegex(AssertionError, 'at most 10'):
+                    self.check()
+
     def test_unreferenced_files_are_not_uploaded(self):
         (self.folder / 'extra.png').write_bytes(b'\x89PNG\r\n\x1a\n')
         with self.assertRaisesRegex(AssertionError, 'Unreferenced upload assets'):

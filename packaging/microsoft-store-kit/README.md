@@ -2,11 +2,11 @@
 
 **Import `/home/alfu64/Development/electrocraft/packaging/microsoft-store` in Partner Center.**
 
-That folder contains one CSV and its 34 referenced PNGs directly beside it: thirty screenshots and four artwork files. It contains no nested folders, supporting documents, installers or additional CSV files. CSV references use `microsoft-store/filename.png`, including the selected folder’s name.
+That folder contains one CSV and fourteen PNGs, comprising ten desktop screenshots and four artwork files. CSV asset paths use `microsoft-store/filename.png`. The default column contains the English fallback and all 38 language columns contain their descriptions.
 
-This `microsoft-store-kit` folder holds supporting material and is **not an import folder**. The earlier import layout is retained under `previous-imports/` for reference only; do not upload it.
+Partner Center rejected screenshots 11–30 in all 38 languages in the previous import. Both current import folders use the supported ten-screenshot limit. All 37 source screenshots are available in `documentation/screenshots/`.
 
-If Partner Center enforces the documented ten-desktop-screenshot limit, the separate sibling `packaging/microsoft-store-10` has one CSV and fourteen referenced PNGs. It uses the same flat layout with `microsoft-store-10/filename.png` asset paths.
+The sibling `packaging/microsoft-store-10` contains the same ten-image selection with its own folder-prefixed paths. Import the main `microsoft-store` folder. The error report is retained as `documentation/import-errors.csv`.
 
 ## Contents
 

@@ -8,8 +8,8 @@ App version: **0.1.13**; MSIX package version: **1.1.13.0**.
 
 1. In Partner Center, open this product and the submission draft associated with export `listingData-9MVQ93DQWRWF-1152921505702360449.csv`.
 2. Choose **Store listings → Import listings → Import folder**.
-3. Select the repository's **`packaging/microsoft-store`** folder. It contains exactly one CSV and the 34 referenced PNGs directly beside it. Do not select `packaging`, `microsoft-store-kit`, a ZIP file, the CSV alone or the old `previous-imports` folders. The CSV references assets as `microsoft-store/filename.png`, including the selected folder’s name.
-4. If Partner Center reports its ten-desktop-screenshot limit, select the sibling **`packaging/microsoft-store-10`** instead. Its CSV and fourteen referenced PNGs are likewise directly beside each other. All 37 original screenshots are archived separately under `microsoft-store-kit/documentation/screenshots/`; the import folders contain only their referenced assets.
+3. Select the repository's **`packaging/microsoft-store`** folder. It contains exactly one CSV and the 14 referenced PNGs directly beside it. Do not select `packaging`, `microsoft-store-kit`, a ZIP file, the CSV alone or the old `previous-imports` folders. The CSV references assets as `microsoft-store/filename.png`, including the selected folder’s name.
+4. Both import folders use ten desktop screenshots and four artwork PNGs. The sibling `packaging/microsoft-store-10` uses its own folder-prefixed image paths. All 37 original screenshots are archived separately under `microsoft-store-kit/documentation/screenshots/`; the import folders contain only their referenced assets.
 5. Check the import error report. Each imported locale needs a description, a reserved product name and at least one screenshot. Verify right-to-left text and any translated drafts in Partner Center's preview.
 6. Upload both released MSIX packages from `packages/` in the **Packages** section, not in the listing import. The manifest identifies Windows Desktop, x64/ARM64, English resources, and minimum Windows build 17763. Changing listing languages does not localize the application or its package resources.
 7. Complete the account-level sections below, save each section, then submit for certification when ready.
@@ -27,7 +27,7 @@ ReleaseNotes is deliberately empty for an initial Store submission, as Microsoft
 - **Category:** suggested Education, with an appropriate science/electronics subcategory if offered. Confirm the category in the portal.
 - **Website:** https://github.com/alfu32/electrocraft
 - **Support:** https://github.com/alfu32/electrocraft/issues
-- **Privacy-policy URL:** publish `documentation/privacy.html` at a public HTTPS URL, then enter that real URL. A local file is not a privacy URL. The repository URL for a document becomes valid only after that document is pushed and publicly accessible.
+- **Privacy-policy URL:** https://github.com/alfu32/electrocraft/blob/master/docs/PRIVACY.md
 - **Age ratings:** complete the IARC questionnaire based on the app. This is an electronics design tool; no rating is fabricated here.
 - **Pricing/markets/publishing date:** choose in Partner Center; the listing CSV cannot set them.
 - **Restricted capability:** `runFullTrust`; copy the capability rationale from `CERTIFICATION.md`.
