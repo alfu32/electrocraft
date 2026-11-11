@@ -74,8 +74,14 @@ jobs:
       - name: Install the snap and check that it starts and paints a window
         run: |
           version=$(python3 -c 'import sys; sys.path.insert(0, "scripts/release"); import common; print(common.app_version())')
-          sudo snap install core24
-          sudo snap install mesa-2404
+          # The snap store is sometimes unreachable from runners: retry with a growing pause.
+          for snap in core24 mesa-2404; do
+            for attempt in 1 2 3 4 5 6; do
+              sudo snap install "$snap" && break
+              if [ "$attempt" = 6 ]; then exit 1; fi
+              sleep $((attempt * 30))
+            done
+          done
           sudo snap install --dangerous dist/electrocraft_*.snap
           sudo snap connect electrocraft:gpu-2404 mesa-2404:gpu-2404 || true
           snap connections electrocraft
