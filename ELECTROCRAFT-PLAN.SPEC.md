@@ -473,6 +473,10 @@ Pins are bidirectional: TRIS bits switch each pin between an output driver and a
 | --- | --- |
 | ![PIC Blinker](docs/screenshots/30-pic-blinker.png) | ![Program editor](docs/screenshots/31-pic-program.png) |
 
+Sample **8-bit Register on a Bus** (`hex-register`): two 74HC161 counters are the H and L nibbles of an 8-bit register shown on two hex displays. Push buttons: `[+1]` clocks L, `[+10]` clocks H (each wraps on its own, no carry), `[reset]` clears both, `[send]` enables a 74HC244 that drives the register onto the bus, `[load]` enables a second 74HC244 that drives the bus into the counters' parallel inputs and clocks them. Eight switches with series and pull-down resistors set the bus value from outside; the buffers overpower them while sending. There is no rotate button because the library has no standard part that both counts and shifts. A test presses every button and checks the register and bus.
+
+![8-bit register on a bus](docs/screenshots/37-hex-register.png)
+
 ### 7.3 Part numbers
 
 Every part has a **part number** (`Part.part_number`, shown in place of the value for parts without one, e.g. `2N2222A`, `74HC00`, `PIC16F84A`). The inspector's field accepts any text; its list offers the known numbers for the part's definition (`crates/ecs-lib/src/parts.rs`, 294 entries), and picking one applies its typical model parameters in one undoable step: diodes (1N4148, 1N4001-1N4007, 1N58xx Schottky, the 1N47xxA Zeners), BJTs (2N2222A, 2N3904, 2N4401, BC547B, BC337, 2N3906, 2N2907A, BC557B), MOSFETs (2N7000, BS170, IRF540N, IRLZ44N, BS250, IRF9540N), op-amps (LM741, LM358, TL071/72, NE5532), comparators, 555s, every logic IC as 74HC/74HCT/74LS or CD/HEF/MC14 numbers (setting the family), and the microcontrollers. New chips start with their default number (74HCxx, CD4xxxB).
@@ -720,7 +724,7 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.12** (Nov 10, 2026):
+**Status at 0.1.16** (Nov 10, 2026):
 
 | Phase | Status | Done | Remaining |
 | --- | --- | --- | --- |

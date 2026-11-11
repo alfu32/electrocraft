@@ -14,7 +14,7 @@ the document; simulation settings (speed and time step).
 
 - `file_new` creates an empty document in a new tab; `file_open_path` (`path`) opens a
   file in a new tab; `file_open_sample` (`id`) opens a built-in example (led-switch,
-  rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider).
+  rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider, hex-register).
 - `file_save` saves to the document's path; an untitled document needs
   `file_save_path` (`path` ending in `.ecs`).
 - `file_switch_tab`, `file_next_tab`, `file_close` (asks the user when there are unsaved

@@ -62,6 +62,12 @@ pub fn all() -> Vec<Sample> {
             subtitle: "Drag the wiper slider in the inspector and watch the meter",
             build: divider,
         },
+        Sample {
+            id: "hex-register",
+            title: "8-bit Register on a Bus",
+            subtitle: "Two 4-bit counters (H, L) on hex displays: +1, +10, reset, and send or load over an 8-bit bus",
+            build: hex_register,
+        },
     ]
 }
 
@@ -139,6 +145,15 @@ impl B<'_> {
             at,
             text: text.into(),
         });
+    }
+    /// Wire a pin out to a short stub ending in a net label.
+    fn tie(&mut self, part: Id, pin: &str, net: &str) {
+        let at = self.pin(part, pin);
+        let centre = self.doc.part(part).map_or(at[0], |p| p.pos[0]);
+        let dx = if at[0] < centre { -40.0 } else { 40.0 };
+        let end = [at[0] + dx, at[1]];
+        self.wire(&[at, end]);
+        self.label(end, net);
     }
     fn finish(mut self, title: &str, speed: f64, step: f64) -> Schematic {
         self.doc.metadata.title = title.into();
@@ -458,6 +473,119 @@ fn divider(cat: &Catalog) -> Schematic {
     b.finish("Potentiometer Divider", 1e-3, 1e-6)
 }
 
+/// Two 4-bit counters (H and L) form an 8-bit register behind push buttons; two
+/// 74244 buffers form the bus transceiver (send: register to bus, load: bus to
+/// register). No standard part both counts and rotates, so there is no shift button.
+fn hex_register(cat: &Catalog) -> Schematic {
+    let mut b = start(cat);
+    let v = b.part("core.vdc", [-520.0, 0.0], 0, false, &[("V", "5")]);
+    b.tie(v, "P", "VCC");
+    b.tie(v, "N", "GND");
+
+    // Buttons: [+1], [+10] pull down and go high; [reset], [load], [send] pull up and go low.
+    for (k, (net, high, name)) in [
+        ("p1", true, "[+1]"),
+        ("p10", true, "[+10]"),
+        ("nrst", false, "[reset]"),
+        ("nload", false, "[load]"),
+        ("nsend", false, "[send]"),
+    ]
+    .into_iter()
+    .enumerate()
+    {
+        let y = -240.0 + 80.0 * k as f64;
+        let s = b.part("core.pushbutton", [-380.0, y], 0, false, &[]);
+        let r = b.part("core.resistor", [-200.0, y], 0, false, &[("R", "10k")]);
+        let (near, far) = if high { ("VCC", "GND") } else { ("GND", "VCC") };
+        b.tie(s, "A", near);
+        b.tie(s, "B", net);
+        b.tie(r, "A", net);
+        b.tie(r, "B", far);
+        b.note([-420.0, y - 40.0], name);
+    }
+
+    // Clock and load glue: loading needs a clock edge, so [load] also clocks both counters.
+    let g1 = b.part("core.not", [60.0, 40.0], 0, false, &[]);
+    b.tie(g1, "A", "nload");
+    b.tie(g1, "Y", "ldp");
+    let g2 = b.part("core.or", [60.0, 140.0], 0, false, &[]);
+    b.tie(g2, "A", "p1");
+    b.tie(g2, "B", "ldp");
+    b.tie(g2, "Y", "clkl");
+    let g3 = b.part("core.or", [60.0, 240.0], 0, false, &[]);
+    b.tie(g3, "A", "p10");
+    b.tie(g3, "B", "ldp");
+    b.tie(g3, "Y", "clkh");
+
+    // The register: L is bits 0-3 and H is bits 4-7.
+    for (at, clk, lo) in [([400.0, -120.0], "clkl", 0), ([400.0, 160.0], "clkh", 4)] {
+        let u = b.part("ic.74x161", at, 0, false, &[]);
+        b.tie(u, "CLK", clk);
+        b.tie(u, "CLR", "nrst");
+        b.tie(u, "LOAD", "nload");
+        b.tie(u, "ENP", "VCC");
+        b.tie(u, "ENT", "VCC");
+        for (k, (d, q)) in [("A", "QA"), ("B", "QB"), ("C", "QC"), ("D", "QD")]
+            .into_iter()
+            .enumerate()
+        {
+            b.tie(u, d, &format!("in{}", lo + k));
+            b.tie(u, q, &format!("q{}", lo + k));
+        }
+    }
+
+    // Bus transceiver: U3 drives the register onto the bus, U4 drives the bus into the register.
+    let send = b.part("ic.74x244", [760.0, 160.0], 0, false, &[]);
+    let load = b.part("ic.74x244", [760.0, -160.0], 0, false, &[]);
+    for k in 0..8 {
+        let n = k + 1;
+        b.tie(send, &format!("A{n}"), &format!("q{k}"));
+        b.tie(send, &format!("Y{n}"), &format!("bus{k}"));
+        b.tie(load, &format!("A{n}"), &format!("bus{k}"));
+        b.tie(load, &format!("Y{n}"), &format!("in{k}"));
+    }
+    for pin in ["OE1", "OE2"] {
+        b.tie(send, pin, "nsend");
+        b.tie(load, pin, "nload");
+    }
+
+    // Bus stimulus: close a switch to put a 1 on that line; the buffers overpower it while sending.
+    for k in 0..8 {
+        let y = -300.0 + 70.0 * k as f64;
+        let s = b.part("core.switch", [1100.0, y], 0, false, &[]);
+        let r = b.part("core.resistor", [1260.0, y], 0, false, &[("R", "1k")]);
+        let pd = b.part("core.resistor", [1420.0, y], 0, false, &[("R", "10k")]);
+        b.tie(s, "A", "VCC");
+        b.tie(s, "B", &format!("sw{k}"));
+        b.tie(r, "A", &format!("sw{k}"));
+        b.tie(r, "B", &format!("bus{k}"));
+        b.tie(pd, "A", &format!("bus{k}"));
+        b.tie(pd, "B", "GND");
+    }
+    b.note(
+        [1060.0, -380.0],
+        "Bus switches: close to put a 1 on bus0..bus7",
+    );
+
+    // Hex displays: H then L.
+    for (x, hi) in [(-100.0, 4), (240.0, 0)] {
+        let dec = b.part("core.bcd7seg", [x, 560.0], 0, false, &[]);
+        let seg = b.part("core.sevenseg", [x + 160.0, 560.0], 0, false, &[]);
+        for (k, d) in ["A", "B", "C", "D"].into_iter().enumerate() {
+            b.tie(dec, d, &format!("q{}", hi + k));
+        }
+        for s in ["a", "b", "c", "d", "e", "f", "g"] {
+            let (from, to) = (b.pin(dec, s), b.pin(seg, s));
+            b.route(from, to, true);
+        }
+    }
+    b.note(
+        [-420.0, -340.0],
+        "[+1] counts L, [+10] counts H, [reset] clears both; hold [send] to put HL on the bus, [load] to take the bus into HL",
+    );
+    b.finish("8-bit Register on a Bus", 0.1, 20e-6)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -587,5 +715,72 @@ mod tests {
         }
         let brightness = c.probes(d)[2];
         assert!(brightness > 0.5, "{brightness}");
+    }
+
+    #[test]
+    fn hex_register_counts_resets_sends_and_loads() {
+        let cat = Catalog::builtin();
+        let doc = hex_register(&cat);
+        let built = crate::catalog::build(&cat, &doc);
+        let mut c = ecs_sim::Circuit::compile_with(&built.netlist, ecs_sim::Options::interactive())
+            .unwrap();
+        c.reset().unwrap();
+        let run = |c: &mut ecs_sim::Circuit, n: usize| {
+            for _ in 0..n {
+                c.step_interactive(1e-6);
+            }
+        };
+        let press = |c: &mut ecs_sim::Circuit, name: &str, hold: bool| {
+            let k = c.instance_index(name).unwrap();
+            c.set_state(k, "pressed", f64::from(u8::from(hold)));
+        };
+        let reg = |c: &ecs_sim::Circuit| {
+            let l = c.state(c.instance_index("U4").unwrap(), "n").unwrap();
+            let h = c.state(c.instance_index("U5").unwrap(), "n").unwrap();
+            (h as u32) << 4 | l as u32
+        };
+        run(&mut c, 200);
+        // S1 +1, S2 +10, S3 reset, S4 load, S5 send.
+        for _ in 0..3 {
+            press(&mut c, "S1", true);
+            run(&mut c, 200);
+            press(&mut c, "S1", false);
+            run(&mut c, 200);
+        }
+        press(&mut c, "S2", true);
+        run(&mut c, 200);
+        press(&mut c, "S2", false);
+        run(&mut c, 200);
+        assert_eq!(reg(&c), 0x13);
+        // Send puts 0x13 on the bus lines.
+        press(&mut c, "S5", true);
+        run(&mut c, 200);
+        let bits: Vec<f64> = (0..8)
+            .map(|k| c.voltage(&format!("bus{k}")).unwrap_or(f64::NAN))
+            .collect();
+        press(&mut c, "S5", false);
+        run(&mut c, 200);
+        let value: u32 = bits
+            .iter()
+            .enumerate()
+            .map(|(k, v)| u32::from(*v > 2.5) << k)
+            .sum();
+        assert_eq!(value, 0x13, "{bits:?}");
+        press(&mut c, "S3", true);
+        run(&mut c, 200);
+        press(&mut c, "S3", false);
+        run(&mut c, 200);
+        assert_eq!(reg(&c), 0);
+        // Close bus switches S6 (bit 0) and S9 (bit 3) and S13 (bit 7): 0x89; load takes it in.
+        for s in ["S6", "S9", "S13"] {
+            let k = c.instance_index(s).unwrap();
+            c.set_state(k, "closed", 1.0);
+        }
+        run(&mut c, 200);
+        press(&mut c, "S4", true);
+        run(&mut c, 200);
+        press(&mut c, "S4", false);
+        run(&mut c, 200);
+        assert_eq!(reg(&c), 0x89);
     }
 }

@@ -32,7 +32,7 @@ implementation status of each phase, is in
 
 ```sh
 cargo run --release                      # Start screen
-cargo run --release -- --sample astable  # led-switch, rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider
+cargo run --release -- --sample astable  # led-switch, rc-lowpass, astable, counter, rectifier, rc-blocks, pic-blink, divider, hex-register
 cargo run --release -- circuit.ecs
 cargo run --release -- --software-canvas # draw the canvas with egui instead of Raylib
 cargo run --release -- --command-catalog # every command id (the MCP tools)

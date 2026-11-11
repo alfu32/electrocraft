@@ -32,7 +32,7 @@ pub fn catalog() -> Vec<Info> {
         info(
             "file.open_sample",
             "Open a sample circuit",
-            json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | pic-blink | divider"}),
+            json!({"id": "led-switch | rc-lowpass | astable | counter | rectifier | rc-blocks | pic-blink | divider | hex-register"}),
         ),
         info(
             "file.save",

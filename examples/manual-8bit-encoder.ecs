@@ -1,0 +1,17 @@
+{
+  "format_version": 2,
+  "metadata": {
+    "title": "manual-8bit-encoder"
+  },
+  "parts": [],
+  "wires": [],
+  "labels": [],
+  "notes": [],
+  "probes": [],
+  "scope": [],
+  "simulation": {
+    "speed": 0.001,
+    "time_step": 1e-6
+  },
+  "next_id": 1
+}
