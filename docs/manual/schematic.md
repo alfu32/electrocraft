@@ -55,3 +55,7 @@ orthogonal). `schematic_orient_part` sets the absolute rotation and mirroring.
 selects parts by designator so `edit_copy`, `edit_duplicate`, `edit_rotate`,
 `edit_mirror` and `edit_delete` apply to them. `edit_undo` and `edit_redo` step
 through the user's undo history: each tool call that changes the schematic is one step.
+
+## Clipboard
+
+Copy and Cut (`edit_copy`, `edit_cut`) put the selection on the system clipboard as text (JSON), so it can be pasted into another Electrocraft window, a file or a chat. In the window, Ctrl+V and the Paste menu read the system clipboard: a copied selection pastes at the pointer, a whole `.ecs` file's text pastes its contents, and short plain text (up to 200 characters) becomes a note. Paste needs the pointer, so it is not an MCP tool.

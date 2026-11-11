@@ -90,7 +90,10 @@ pub enum Cmd {
     Mirror,
     Copy,
     Cut,
+    /// Ask the system clipboard for its text; it arrives as `PasteText`.
     Paste,
+    /// Paste clipboard text: a copied selection, a whole `.ecs` file or a short note.
+    PasteText(String),
     Duplicate,
     SelectAll,
     Tool(Tool),
@@ -1129,9 +1132,12 @@ impl App {
                 }
             }
             Cmd::Copy => {
-                self.clipboard = Clipboard::copy(&self.doc, &self.selection);
-                if let Ok(text) = serde_json::to_string(&self.clipboard) {
-                    ctx.copy_text(text);
+                let clip = Clipboard::copy(&self.doc, &self.selection);
+                if !clip.is_empty() {
+                    if let Ok(text) = serde_json::to_string(&clip) {
+                        ctx.copy_text(text);
+                    }
+                    self.clipboard = clip;
                 }
             }
             Cmd::Cut => {
@@ -1139,22 +1145,49 @@ impl App {
                 self.run(Cmd::Delete, ctx);
             }
             Cmd::Paste => {
-                if !self.clipboard.is_empty() {
-                    let at = self.hover_world.unwrap_or([0.0, 0.0]);
-                    let anchor = self
-                        .clipboard
+                ctx.send_viewport_cmd(egui::ViewportCommand::RequestPaste);
+            }
+            Cmd::PasteText(text) => {
+                let clip = if let Ok(c) = serde_json::from_str::<Clipboard>(&text) {
+                    c
+                } else if let Ok(doc) = Schematic::from_json(&text) {
+                    let all = doc
                         .parts
-                        .first()
-                        .map(|p| p.pos)
-                        .or_else(|| self.clipboard.wires.first().map(|w| w.points[0]))
-                        .unwrap_or([0.0, 0.0]);
-                    let delta = snap([at[0] - anchor[0], at[1] - anchor[1]]);
-                    let created = self.edit(Command::Paste {
-                        clip: self.clipboard.clone(),
-                        delta,
-                    });
-                    self.selection = created.into_iter().collect();
+                        .iter()
+                        .map(|p| Item::Part(p.id))
+                        .chain(doc.wires.iter().map(|w| Item::Wire(w.id)))
+                        .chain(doc.labels.iter().map(|l| Item::Label(l.id)))
+                        .chain(doc.notes.iter().map(|n| Item::Note(n.id)))
+                        .collect();
+                    Clipboard::copy(&doc, &all)
+                } else {
+                    let t = text.trim();
+                    if t.is_empty() || t.len() > 200 {
+                        self.status = "The clipboard holds no circuit or short note".into();
+                    } else {
+                        let at = snap(self.hover_world.unwrap_or([0.0, 0.0]));
+                        self.edit(Command::AddNote {
+                            at,
+                            text: t.to_string(),
+                        });
+                    }
+                    return;
+                };
+                if clip.is_empty() {
+                    return;
                 }
+                let at = self.hover_world.unwrap_or([0.0, 0.0]);
+                let anchor = clip
+                    .parts
+                    .first()
+                    .map(|p| p.pos)
+                    .or_else(|| clip.wires.first().map(|w| w.points[0]))
+                    .or_else(|| clip.labels.first().map(|l| l.at))
+                    .or_else(|| clip.notes.first().map(|n| n.at))
+                    .unwrap_or([0.0, 0.0]);
+                let delta = snap([at[0] - anchor[0], at[1] - anchor[1]]);
+                let created = self.edit(Command::Paste { clip, delta });
+                self.selection = created.into_iter().collect();
             }
             Cmd::Duplicate => {
                 let clip = Clipboard::copy(&self.doc, &self.selection);
@@ -1689,6 +1722,24 @@ impl App {
         ctx.input_mut(|i| {
             let m = Modifiers::COMMAND;
             let ms = Modifiers::COMMAND | Modifiers::SHIFT;
+            // egui-winit turns Ctrl+C/X/V into these events instead of key presses.
+            if !typing {
+                i.events.retain(|e| match e {
+                    egui::Event::Copy => {
+                        cmds.push(Cmd::Copy);
+                        false
+                    }
+                    egui::Event::Cut => {
+                        cmds.push(Cmd::Cut);
+                        false
+                    }
+                    egui::Event::Paste(text) => {
+                        cmds.push(Cmd::PasteText(text.clone()));
+                        false
+                    }
+                    _ => true,
+                });
+            }
             let mut take = |mods: Modifiers, key: Key, cmd: Cmd, cmds: &mut Vec<Cmd>| {
                 if i.consume_key(mods, key) {
                     cmds.push(cmd);
@@ -1707,9 +1758,6 @@ impl App {
             take(ms, Key::Z, Cmd::Redo, &mut cmds);
             take(m, Key::Z, Cmd::Undo, &mut cmds);
             take(m, Key::Y, Cmd::Redo, &mut cmds);
-            take(m, Key::C, Cmd::Copy, &mut cmds);
-            take(m, Key::X, Cmd::Cut, &mut cmds);
-            take(m, Key::V, Cmd::Paste, &mut cmds);
             take(m, Key::D, Cmd::Duplicate, &mut cmds);
             take(m, Key::A, Cmd::SelectAll, &mut cmds);
             if let Some(r) = &single_part {
@@ -2400,7 +2448,7 @@ impl App {
                 chosen = Some(Cmd::ExitComponent);
                 ui.close();
             }
-            if !self.clipboard.is_empty() && crate::chrome::menu_item(ui, "Paste", "Ctrl+V") {
+            if crate::chrome::menu_item(ui, "Paste", "Ctrl+V") {
                 chosen = Some(Cmd::Paste);
                 ui.close();
             }
@@ -2562,5 +2610,45 @@ mod live_tests {
             wait_live(&mut app),
             "live values stopped after adding a part"
         );
+    }
+
+    #[test]
+    fn clipboard_text_pastes_selections_files_and_notes() {
+        let ctx = egui::Context::default();
+        let mut app = App::new(true);
+        let sample = |app: &App, id: &str| {
+            let s = crate::samples::all()
+                .into_iter()
+                .find(|s| s.id == id)
+                .unwrap();
+            (s.build)(&app.cat)
+        };
+        app.doc = sample(&app, "divider");
+        let parts = app.doc.parts.len();
+        app.selection = app.doc.parts.iter().map(|p| Item::Part(p.id)).collect();
+        // Copy goes to the system clipboard as text; paste reads text back.
+        app.run(Cmd::Copy, &ctx);
+        let text = serde_json::to_string(&app.clipboard).unwrap();
+        app.hover_world = Some([400.0, 400.0]);
+        app.run(Cmd::PasteText(text), &ctx);
+        assert_eq!(app.doc.parts.len(), parts * 2);
+        // A whole .ecs file pastes its contents.
+        let file = sample(&app, "led-switch");
+        let n = file.parts.len();
+        app.run(Cmd::PasteText(file.to_json()), &ctx);
+        assert_eq!(app.doc.parts.len(), parts * 2 + n);
+        // Short plain text becomes a note, long text is refused.
+        let notes = app.doc.notes.len();
+        app.run(Cmd::PasteText("check R1".into()), &ctx);
+        assert_eq!(app.doc.notes.len(), notes + 1);
+        app.run(Cmd::PasteText("x".repeat(500)), &ctx);
+        assert_eq!(app.doc.notes.len(), notes + 1);
+        assert!(app.status.contains("no circuit"));
+        // Cut removes the selection and keeps it for paste.
+        app.selection = [Item::Part(app.doc.parts[0].id)].into();
+        let before = app.doc.parts.len();
+        app.run(Cmd::Cut, &ctx);
+        assert_eq!(app.doc.parts.len(), before - 1);
+        assert!(!app.clipboard.is_empty());
     }
 }

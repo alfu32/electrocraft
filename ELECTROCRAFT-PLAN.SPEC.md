@@ -724,7 +724,10 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.18** (Nov 10, 2026):
+**Status at 0.1.19**
+
+Clipboard: Copy and Cut write the selection to the system clipboard as JSON; Ctrl+V and Paste read it (egui-winit delivers Ctrl+C/X/V as Copy/Cut/Paste events, never key presses, so the earlier key handlers never fired). A selection, a whole `.ecs` text or a short note can be pasted.
+ (Nov 10, 2026):
 
 | Phase | Status | Done | Remaining |
 | --- | --- | --- | --- |
