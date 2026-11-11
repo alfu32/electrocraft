@@ -1,0 +1,7 @@
+circuit simulator
+schematic editor
+electronics
+oscilloscope
+SPICE
+PIC microcontroller
+circuit analysis

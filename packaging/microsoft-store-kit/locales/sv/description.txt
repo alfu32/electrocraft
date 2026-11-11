@@ -1,0 +1,1 @@
+Rita elektroniska kretsscheman och simulera kretsar i realtid med Electrocraft. Följ spänningar, strömmar och vågformer i oscilloskopet. Analysera analoga och digitala kretsar, importera SPICE-modeller och programmera PIC-mikrokontroller som stöds i assemblerspråk. Gränssnittet är på engelska. Komponentkataloger på nätet är valfria och avstängda som standard.

@@ -1,0 +1,45 @@
+{
+  "language": "English",
+  "locale": "en",
+  "translation_status": "copied from en-us",
+  "Title": "Electrocraft",
+  "ShortTitle": "Electrocraft",
+  "SortTitle": "Electrocraft",
+  "ShortDescription": "Explore electronics with live circuit simulation, waveform analysis, programmable PICs and reusable components. Draw, experiment and see the results.",
+  "Description": "Build a circuit. Change a value. See what happens.\n\nElectrocraft combines a schematic editor with live analog and digital simulation. Place components, connect wires and explore a circuit while it runs. Wire colours show voltage, animated dots show current and LEDs respond as you flip switches or adjust a potentiometer.\n\nMeasure and compare\nAdd oscilloscope channels using net names or formulas for voltage, current and power. Use cursors and docked or floating waveforms. Run DC operating-point, DC sweep, transient and AC analyses to investigate bias points, timing and frequency response.\n\nGo beyond basic components\nUse analog devices, digital gates and 74xx/4000-series logic ICs. Program supported PIC12, PIC16, PIC24 and PIC32 microcontrollers in assembly. Build reusable components from nested schematics or JavaScript equations, and import SPICE models and subcircuits. A companion tool fits models to datasheet curves.\n\nConnect design and sourcing\nOptionally search JLCPCB/LCSC, DigiKey, Mouser, TME and Farnell/element14 catalogs. Record manufacturer part numbers and preferred vendors, then export a CSV bill of materials. Online catalogs are off by default and require your approval. JLCPCB search works without an API key; other providers require your own credentials, kept in the Windows credential store. Supplier availability and terms apply.\n\nWork your way\nOpen built-in examples, edit several documents in tabs and save readable .ecs schematic files. An optional MCP server lets compatible clients build and inspect circuits in your running app. MCP clients and any AI services they use are separate products.\n\nThe application interface, built-in examples and documentation are currently in English. Core editing and simulation work offline; optional catalog searches need internet access. Simulation results depend on the circuit and model assumptions.",
+  "DevStudio": "K3D0",
+  "features": [
+    "Draw and wire analog and digital schematics with undo and multiple document tabs",
+    "Watch live voltages, current dots, glowing LEDs, switches and potentiometers",
+    "Probe waveforms with formula-based oscilloscope channels and cursors",
+    "Run DC operating point, DC sweep, transient and AC analyses",
+    "Build with analog parts, logic gates and 74xx/4000-series logic ICs",
+    "Program supported PIC12, PIC16, PIC24 and PIC32 microcontrollers in assembly",
+    "Create custom components with nested schematics or JavaScript equations",
+    "Import SPICE models and subcircuits and export SPICE netlists",
+    "Find parts in optional supplier catalogs, track sourcing and export CSV bills of materials",
+    "Fit device models to datasheet curves with the companion datasheet tool",
+    "Control the running app from compatible MCP clients using the optional stdio server",
+    "Explore built-in circuits and save editable .ecs schematic documents"
+  ],
+  "keywords": [
+    "circuit simulator",
+    "schematic editor",
+    "electronics",
+    "oscilloscope",
+    "SPICE",
+    "PIC microcontroller",
+    "circuit analysis"
+  ],
+  "minimum_hardware": [
+    "Windows 10 version 1809 (build 17763) or later; Windows 11",
+    "x64 or ARM64 Windows PC",
+    "OpenGL-capable graphics driver; software-canvas fallback available",
+    "Keyboard and pointing device; application window at least 960 × 600"
+  ],
+  "recommended_hardware": [
+    "1366 × 768 or larger display for schematics and plots",
+    "Internet access and provider credentials only for optional online catalogs"
+  ],
+  "ReleaseNotes": ""
+}

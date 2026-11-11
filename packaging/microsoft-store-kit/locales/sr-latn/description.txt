@@ -1,0 +1,1 @@
+Crtajte elektronske šeme i simulirajte kola u realnom vremenu uz Electrocraft. Pratite napone, struje i talasne oblike na osciloskopu. Analizirajte analogna i digitalna kola, uvezite SPICE modele i programirajte podržane PIC mikrokontrolere na asemblerskom jeziku. Korisnički interfejs je na engleskom. Katalozi komponenti na internetu su opcioni i podrazumevano isključeni.

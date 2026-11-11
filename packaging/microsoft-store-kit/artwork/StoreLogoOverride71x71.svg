@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <title>Electrocraft</title>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2C3547"/>
+      <stop offset="1" stop-color="#161A22"/>
+    </linearGradient>
+    <linearGradient id="bolt" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8FD0FF"/>
+      <stop offset="1" stop-color="#2F6FD6"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FFE066" stop-opacity="0.85"/>
+      <stop offset="1" stop-color="#FFE066" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="url(#bg)"/>
+  <rect x="25.5" y="25.5" width="461" height="461" rx="102.5" fill="none" stroke="#3D4658" stroke-width="3"/>
+  <!-- circuit loop with a resistor on top -->
+  <path d="M206 112 H120 Q104 112 104 128 V384 Q104 400 120 400 H392 Q408 400 408 384 V128 Q408 112 392 112 H352"
+        fill="none" stroke="#52E07E" stroke-width="16" stroke-linecap="round"/>
+  <path d="M206 112 L220 86 L242 138 L264 86 L286 138 L308 86 L330 138 L352 112"
+        fill="none" stroke="#C7D3E3" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="104" cy="256" r="16" fill="#8FB8E0"/>
+  <circle cx="408" cy="256" r="16" fill="#8FB8E0"/>
+  <!-- current dots -->
+  <circle cx="104" cy="186" r="9" fill="#FFE066"/>
+  <circle cx="104" cy="330" r="9" fill="#FFE066"/>
+  <circle cx="190" cy="400" r="9" fill="#FFE066"/>
+  <circle cx="322" cy="400" r="9" fill="#FFE066"/>
+  <circle cx="408" cy="330" r="9" fill="#FFE066"/>
+  <circle cx="408" cy="186" r="9" fill="#FFE066"/>
+  <!-- bolt -->
+  <circle cx="256" cy="268" r="118" fill="url(#glow)"/>
+  <path d="M286 152 L196 284 H252 L224 384 L322 240 H266 L296 152 Z" fill="url(#bolt)" stroke="#DDF0FF" stroke-width="6" stroke-linejoin="round"/>
+</svg>

@@ -1,0 +1,17 @@
+Build a circuit. Change a value. See what happens.
+
+Electrocraft combines a schematic editor with live analog and digital simulation. Place components, connect wires and explore a circuit while it runs. Wire colours show voltage, animated dots show current and LEDs respond as you flip switches or adjust a potentiometer.
+
+Measure and compare
+Add oscilloscope channels using net names or formulas for voltage, current and power. Use cursors and docked or floating waveforms. Run DC operating-point, DC sweep, transient and AC analyses to investigate bias points, timing and frequency response.
+
+Go beyond basic components
+Use analog devices, digital gates and 74xx/4000-series logic ICs. Program supported PIC12, PIC16, PIC24 and PIC32 microcontrollers in assembly. Build reusable components from nested schematics or JavaScript equations, and import SPICE models and subcircuits. A companion tool fits models to datasheet curves.
+
+Connect design and sourcing
+Optionally search JLCPCB/LCSC, DigiKey, Mouser, TME and Farnell/element14 catalogs. Record manufacturer part numbers and preferred vendors, then export a CSV bill of materials. Online catalogs are off by default and require your approval. JLCPCB search works without an API key; other providers require your own credentials, kept in the Windows credential store. Supplier availability and terms apply.
+
+Work your way
+Open built-in examples, edit several documents in tabs and save readable .ecs schematic files. An optional MCP server lets compatible clients build and inspect circuits in your running app. MCP clients and any AI services they use are separate products.
+
+The application interface, built-in examples and documentation are currently in English. Core editing and simulation work offline; optional catalog searches need internet access. Simulation results depend on the circuit and model assumptions.

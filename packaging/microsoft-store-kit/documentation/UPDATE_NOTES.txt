@@ -1,0 +1,4 @@
+For a later update listing (leave ReleaseNotes empty on the initial Store submission):
+
+0.1.13
+Online part catalogs now have a dedicated tab in a larger, resizable Settings dialog. Provider descriptions, credentials and regional options use the full page height, with scrolling for additional providers. The Live simulation tab keeps the animation and display controls together.

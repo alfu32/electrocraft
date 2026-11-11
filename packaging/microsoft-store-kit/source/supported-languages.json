@@ -1,0 +1,871 @@
+{
+  "source": "https://learn.microsoft.com/en-us/windows/apps/publish/publish-your-app/msix/app-package-requirements#supported-languages",
+  "checked": "2026-11-10",
+  "languages": [
+    {
+      "language": "Arabic",
+      "supported_codes": [
+        "ar",
+        "ar-sa",
+        "ar-ae",
+        "ar-bh",
+        "ar-dz",
+        "ar-eg",
+        "ar-iq",
+        "ar-jo",
+        "ar-kw",
+        "ar-lb",
+        "ar-ly",
+        "ar-ma",
+        "ar-om",
+        "ar-qa",
+        "ar-sy",
+        "ar-tn",
+        "ar-ye"
+      ]
+    },
+    {
+      "language": "Afrikaans",
+      "supported_codes": [
+        "af",
+        "af-za"
+      ]
+    },
+    {
+      "language": "Albanian",
+      "supported_codes": [
+        "sq",
+        "sq-al"
+      ]
+    },
+    {
+      "language": "Amharic",
+      "supported_codes": [
+        "am",
+        "am-et"
+      ]
+    },
+    {
+      "language": "Armenian",
+      "supported_codes": [
+        "hy",
+        "hy-am"
+      ]
+    },
+    {
+      "language": "Assamese",
+      "supported_codes": [
+        "as",
+        "as-in"
+      ]
+    },
+    {
+      "language": "Azerbaijani",
+      "supported_codes": [
+        "az-arab",
+        "az-arab-az",
+        "az-cyrl",
+        "az-cyrl-az",
+        "az-latn",
+        "az-latn-az"
+      ]
+    },
+    {
+      "language": "Basque (Basque)",
+      "supported_codes": [
+        "eu",
+        "eu-es"
+      ]
+    },
+    {
+      "language": "Belarusian",
+      "supported_codes": [
+        "be",
+        "be-by"
+      ]
+    },
+    {
+      "language": "Bangla",
+      "supported_codes": [
+        "bn",
+        "bn-bd",
+        "bn-in"
+      ]
+    },
+    {
+      "language": "Bosnian",
+      "supported_codes": [
+        "bs",
+        "bs-cyrl",
+        "bs-cyrl-ba",
+        "bs-latn",
+        "bs-latn-ba"
+      ]
+    },
+    {
+      "language": "Bulgarian",
+      "supported_codes": [
+        "bg",
+        "bg-bg"
+      ]
+    },
+    {
+      "language": "Catalan",
+      "supported_codes": [
+        "ca",
+        "ca-es",
+        "ca-es-valencia"
+      ]
+    },
+    {
+      "language": "Cherokee",
+      "supported_codes": [
+        "chr-cher",
+        "chr-cher-us",
+        "chr-latn"
+      ]
+    },
+    {
+      "language": "Chinese (Simplified)",
+      "supported_codes": [
+        "zh-hans",
+        "zh-cn",
+        "zh-hans-cn",
+        "zh-sg",
+        "zh-hans-sg"
+      ]
+    },
+    {
+      "language": "Chinese (Traditional)",
+      "supported_codes": [
+        "zh-hant",
+        "zh-hk",
+        "zh-mo",
+        "zh-tw",
+        "zh-hant-hk",
+        "zh-hant-mo",
+        "zh-hant-tw"
+      ]
+    },
+    {
+      "language": "Croatian",
+      "supported_codes": [
+        "hr",
+        "hr-hr",
+        "hr-ba"
+      ]
+    },
+    {
+      "language": "Czech",
+      "supported_codes": [
+        "cs",
+        "cs-cz"
+      ]
+    },
+    {
+      "language": "Danish",
+      "supported_codes": [
+        "da",
+        "da-dk"
+      ]
+    },
+    {
+      "language": "Dari",
+      "supported_codes": [
+        "prs",
+        "prs-af",
+        "prs-arab"
+      ]
+    },
+    {
+      "language": "Dutch",
+      "supported_codes": [
+        "nl",
+        "nl-nl",
+        "nl-be"
+      ]
+    },
+    {
+      "language": "English",
+      "supported_codes": [
+        "en",
+        "en-au",
+        "en-ca",
+        "en-gb",
+        "en-ie",
+        "en-in",
+        "en-nz",
+        "en-sg",
+        "en-us",
+        "en-za",
+        "en-bz",
+        "en-hk",
+        "en-id",
+        "en-jm",
+        "en-kz",
+        "en-mt",
+        "en-my",
+        "en-ph",
+        "en-pk",
+        "en-tt",
+        "en-vn",
+        "en-zw",
+        "en-053",
+        "en-021",
+        "en-029",
+        "en-011",
+        "en-018",
+        "en-014"
+      ]
+    },
+    {
+      "language": "Estonian",
+      "supported_codes": [
+        "et",
+        "et-ee"
+      ]
+    },
+    {
+      "language": "Filipino",
+      "supported_codes": [
+        "fil",
+        "fil-latn",
+        "fil-ph"
+      ]
+    },
+    {
+      "language": "Finnish",
+      "supported_codes": [
+        "fi",
+        "fi-fi"
+      ]
+    },
+    {
+      "language": "French",
+      "supported_codes": [
+        "fr",
+        "fr-be",
+        "fr-ca",
+        "fr-ch",
+        "fr-fr",
+        "fr-lu",
+        "fr-015",
+        "fr-cd",
+        "fr-ci",
+        "fr-cm",
+        "fr-ht",
+        "fr-ma",
+        "fr-mc",
+        "fr-ml",
+        "fr-re",
+        "frc-latn",
+        "frp-latn",
+        "fr-155",
+        "fr-029",
+        "fr-021",
+        "fr-011"
+      ]
+    },
+    {
+      "language": "Galician",
+      "supported_codes": [
+        "gl",
+        "gl-es"
+      ]
+    },
+    {
+      "language": "Georgian",
+      "supported_codes": [
+        "ka",
+        "ka-ge"
+      ]
+    },
+    {
+      "language": "German",
+      "supported_codes": [
+        "de",
+        "de-at",
+        "de-ch",
+        "de-de",
+        "de-lu",
+        "de-li"
+      ]
+    },
+    {
+      "language": "Greek",
+      "supported_codes": [
+        "el",
+        "el-gr"
+      ]
+    },
+    {
+      "language": "Gujarati",
+      "supported_codes": [
+        "gu",
+        "gu-in"
+      ]
+    },
+    {
+      "language": "Hausa",
+      "supported_codes": [
+        "ha",
+        "ha-latn",
+        "ha-latn-ng"
+      ]
+    },
+    {
+      "language": "Hebrew",
+      "supported_codes": [
+        "he",
+        "he-il"
+      ]
+    },
+    {
+      "language": "Hindi",
+      "supported_codes": [
+        "hi",
+        "hi-in"
+      ]
+    },
+    {
+      "language": "Hungarian",
+      "supported_codes": [
+        "hu",
+        "hu-hu"
+      ]
+    },
+    {
+      "language": "Icelandic",
+      "supported_codes": [
+        "is",
+        "is-is"
+      ]
+    },
+    {
+      "language": "Igbo",
+      "supported_codes": [
+        "ig-latn",
+        "ig-ng"
+      ]
+    },
+    {
+      "language": "Indonesian",
+      "supported_codes": [
+        "id",
+        "id-id"
+      ]
+    },
+    {
+      "language": "Inuktitut (Latin)",
+      "supported_codes": [
+        "iu-cans",
+        "iu-latn",
+        "iu-latn-ca"
+      ]
+    },
+    {
+      "language": "Irish",
+      "supported_codes": [
+        "ga",
+        "ga-ie"
+      ]
+    },
+    {
+      "language": "isiXhosa",
+      "supported_codes": [
+        "xh",
+        "xh-za"
+      ]
+    },
+    {
+      "language": "isiZulu",
+      "supported_codes": [
+        "zu",
+        "zu-za"
+      ]
+    },
+    {
+      "language": "Italian",
+      "supported_codes": [
+        "it",
+        "it-it",
+        "it-ch"
+      ]
+    },
+    {
+      "language": "Japanese",
+      "supported_codes": [
+        "ja",
+        "ja-jp"
+      ]
+    },
+    {
+      "language": "Kannada",
+      "supported_codes": [
+        "kn",
+        "kn-in"
+      ]
+    },
+    {
+      "language": "Kazakh",
+      "supported_codes": [
+        "kk",
+        "kk-kz"
+      ]
+    },
+    {
+      "language": "Khmer",
+      "supported_codes": [
+        "km",
+        "km-kh"
+      ]
+    },
+    {
+      "language": "K'iche'",
+      "supported_codes": [
+        "quc-latn",
+        "qut-gt",
+        "qut-latn"
+      ]
+    },
+    {
+      "language": "Kinyarwanda",
+      "supported_codes": [
+        "rw",
+        "rw-rw"
+      ]
+    },
+    {
+      "language": "KiSwahili",
+      "supported_codes": [
+        "sw",
+        "sw-ke"
+      ]
+    },
+    {
+      "language": "Konkani",
+      "supported_codes": [
+        "kok",
+        "kok-in"
+      ]
+    },
+    {
+      "language": "Korean",
+      "supported_codes": [
+        "ko",
+        "ko-kr"
+      ]
+    },
+    {
+      "language": "Kurdish",
+      "supported_codes": [
+        "ku-arab",
+        "ku-arab-iq"
+      ]
+    },
+    {
+      "language": "Kyrgyz",
+      "supported_codes": [
+        "ky-kg",
+        "ky-cyrl"
+      ]
+    },
+    {
+      "language": "Lao",
+      "supported_codes": [
+        "lo",
+        "lo-la"
+      ]
+    },
+    {
+      "language": "Latvian",
+      "supported_codes": [
+        "lv",
+        "lv-lv"
+      ]
+    },
+    {
+      "language": "Lithuanian",
+      "supported_codes": [
+        "lt",
+        "lt-lt"
+      ]
+    },
+    {
+      "language": "Luxembourgish",
+      "supported_codes": [
+        "lb",
+        "lb-lu"
+      ]
+    },
+    {
+      "language": "Macedonian",
+      "supported_codes": [
+        "mk",
+        "mk-mk"
+      ]
+    },
+    {
+      "language": "Malay",
+      "supported_codes": [
+        "ms",
+        "ms-bn",
+        "ms-my"
+      ]
+    },
+    {
+      "language": "Malayalam",
+      "supported_codes": [
+        "ml",
+        "ml-in"
+      ]
+    },
+    {
+      "language": "Maltese",
+      "supported_codes": [
+        "mt",
+        "mt-mt"
+      ]
+    },
+    {
+      "language": "Maori",
+      "supported_codes": [
+        "mi",
+        "mi-latn",
+        "mi-nz"
+      ]
+    },
+    {
+      "language": "Marathi",
+      "supported_codes": [
+        "mr",
+        "mr-in"
+      ]
+    },
+    {
+      "language": "Mongolian (Cyrillic)",
+      "supported_codes": [
+        "mn-cyrl",
+        "mn-mong",
+        "mn-mn",
+        "mn-phag"
+      ]
+    },
+    {
+      "language": "Nepali",
+      "supported_codes": [
+        "ne",
+        "ne-np"
+      ]
+    },
+    {
+      "language": "Norwegian",
+      "supported_codes": [
+        "nb",
+        "nb-no",
+        "nn",
+        "nn-no",
+        "no",
+        "no-no"
+      ]
+    },
+    {
+      "language": "Odia",
+      "supported_codes": [
+        "or",
+        "or-in"
+      ]
+    },
+    {
+      "language": "Persian",
+      "supported_codes": [
+        "fa",
+        "fa-ir"
+      ]
+    },
+    {
+      "language": "Polish",
+      "supported_codes": [
+        "pl",
+        "pl-pl"
+      ]
+    },
+    {
+      "language": "Portuguese (Brazil)",
+      "supported_codes": [
+        "pt-br"
+      ]
+    },
+    {
+      "language": "Portuguese (Portugal)",
+      "supported_codes": [
+        "pt",
+        "pt-pt"
+      ]
+    },
+    {
+      "language": "Punjabi",
+      "supported_codes": [
+        "pa",
+        "pa-arab",
+        "pa-arab-pk",
+        "pa-deva",
+        "pa-in"
+      ]
+    },
+    {
+      "language": "Quechua",
+      "supported_codes": [
+        "quz",
+        "quz-bo",
+        "quz-ec",
+        "quz-pe"
+      ]
+    },
+    {
+      "language": "Romanian",
+      "supported_codes": [
+        "ro",
+        "ro-ro"
+      ]
+    },
+    {
+      "language": "Russian",
+      "supported_codes": [
+        "ru",
+        "ru-ru"
+      ]
+    },
+    {
+      "language": "Scottish Gaelic",
+      "supported_codes": [
+        "gd-gb",
+        "gd-latn"
+      ]
+    },
+    {
+      "language": "Serbian (Latin)",
+      "supported_codes": [
+        "sr-latn",
+        "sr-latn-cs",
+        "sr",
+        "sr-latn-ba",
+        "sr-latn-me",
+        "sr-latn-rs"
+      ]
+    },
+    {
+      "language": "Serbian (Cyrillic)",
+      "supported_codes": [
+        "sr-cyrl",
+        "sr-cyrl-ba",
+        "sr-cyrl-cs",
+        "sr-cyrl-me",
+        "sr-cyrl-rs"
+      ]
+    },
+    {
+      "language": "Sesotho sa Leboa",
+      "supported_codes": [
+        "nso",
+        "nso-za"
+      ]
+    },
+    {
+      "language": "Setswana",
+      "supported_codes": [
+        "tn",
+        "tn-bw",
+        "tn-za"
+      ]
+    },
+    {
+      "language": "Sindhi",
+      "supported_codes": [
+        "sd-arab",
+        "sd-arab-pk",
+        "sd-deva"
+      ]
+    },
+    {
+      "language": "Sinhala",
+      "supported_codes": [
+        "si",
+        "si-lk"
+      ]
+    },
+    {
+      "language": "Slovak",
+      "supported_codes": [
+        "sk",
+        "sk-sk"
+      ]
+    },
+    {
+      "language": "Slovenian",
+      "supported_codes": [
+        "sl",
+        "sl-si"
+      ]
+    },
+    {
+      "language": "Spanish",
+      "supported_codes": [
+        "es",
+        "es-cl",
+        "es-co",
+        "es-es",
+        "es-mx",
+        "es-ar",
+        "es-bo",
+        "es-cr",
+        "es-do",
+        "es-ec",
+        "es-gt",
+        "es-hn",
+        "es-ni",
+        "es-pa",
+        "es-pe",
+        "es-pr",
+        "es-py",
+        "es-sv",
+        "es-us",
+        "es-uy",
+        "es-ve",
+        "es-019",
+        "es-419"
+      ]
+    },
+    {
+      "language": "Swedish",
+      "supported_codes": [
+        "sv",
+        "sv-se",
+        "sv-fi"
+      ]
+    },
+    {
+      "language": "Tajik (Cyrillic)",
+      "supported_codes": [
+        "tg-arab",
+        "tg-cyrl",
+        "tg-cyrl-tj",
+        "tg-latn"
+      ]
+    },
+    {
+      "language": "Tamil",
+      "supported_codes": [
+        "ta",
+        "ta-in"
+      ]
+    },
+    {
+      "language": "Tatar",
+      "supported_codes": [
+        "tt-arab",
+        "tt-cyrl",
+        "tt-latn",
+        "tt-ru"
+      ]
+    },
+    {
+      "language": "Telugu",
+      "supported_codes": [
+        "te",
+        "te-in"
+      ]
+    },
+    {
+      "language": "Thai",
+      "supported_codes": [
+        "th",
+        "th-th"
+      ]
+    },
+    {
+      "language": "Tigrinya",
+      "supported_codes": [
+        "ti",
+        "ti-et"
+      ]
+    },
+    {
+      "language": "Turkish",
+      "supported_codes": [
+        "tr",
+        "tr-tr"
+      ]
+    },
+    {
+      "language": "Turkmen",
+      "supported_codes": [
+        "tk-cyrl",
+        "tk-latn",
+        "tk-tm",
+        "tk-latn-tr",
+        "tk-cyrl-tr"
+      ]
+    },
+    {
+      "language": "Ukrainian",
+      "supported_codes": [
+        "uk",
+        "uk-ua"
+      ]
+    },
+    {
+      "language": "Urdu",
+      "supported_codes": [
+        "ur",
+        "ur-pk"
+      ]
+    },
+    {
+      "language": "Uyghur",
+      "supported_codes": [
+        "ug-arab",
+        "ug-cn",
+        "ug-cyrl",
+        "ug-latn"
+      ]
+    },
+    {
+      "language": "Uzbek (Latin)",
+      "supported_codes": [
+        "uz",
+        "uz-cyrl",
+        "uz-latn",
+        "uz-latn-uz"
+      ]
+    },
+    {
+      "language": "Vietnamese",
+      "supported_codes": [
+        "vi",
+        "vi-vn"
+      ]
+    },
+    {
+      "language": "Welsh",
+      "supported_codes": [
+        "cy",
+        "cy-gb"
+      ]
+    },
+    {
+      "language": "Wolof",
+      "supported_codes": [
+        "wo",
+        "wo-sn"
+      ]
+    },
+    {
+      "language": "Yoruba",
+      "supported_codes": [
+        "yo-latn",
+        "yo-ng"
+      ]
+    }
+  ]
+}

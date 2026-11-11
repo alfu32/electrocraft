@@ -1,0 +1,1 @@
+Vẽ sơ đồ điện tử và mô phỏng mạch theo thời gian thực với Electrocraft. Theo dõi điện áp, dòng điện và dạng sóng trên máy hiện sóng. Phân tích mạch tương tự và mạch số, nhập mô hình SPICE và lập trình hợp ngữ cho các vi điều khiển PIC được hỗ trợ. Giao diện ứng dụng bằng tiếng Anh. Danh mục linh kiện trực tuyến là tùy chọn và được tắt theo mặc định.

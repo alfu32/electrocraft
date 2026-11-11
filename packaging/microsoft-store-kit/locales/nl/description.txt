@@ -1,0 +1,1 @@
+Teken elektronische schema’s en simuleer schakelingen in realtime met Electrocraft. Bekijk spanningen, stromen en golfvormen op de oscilloscoop. Analyseer analoge en digitale schakelingen, importeer SPICE-modellen en programmeer ondersteunde PIC-microcontrollers in assembleertaal. De interface is Engelstalig. Online onderdelencatalogi zijn optioneel en staan standaard uit.
