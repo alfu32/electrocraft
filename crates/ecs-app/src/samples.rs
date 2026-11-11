@@ -783,4 +783,12 @@ mod tests {
         run(&mut c, 200);
         assert_eq!(reg(&c), 0x89);
     }
+
+    #[test]
+    #[ignore = "writes the sample as an .ecs file: ECS_EXPORT=<path>"]
+    fn export_hex_register() {
+        let path = std::env::var("ECS_EXPORT").expect("ECS_EXPORT");
+        let cat = Catalog::builtin();
+        std::fs::write(path, hex_register(&cat).to_json()).unwrap();
+    }
 }

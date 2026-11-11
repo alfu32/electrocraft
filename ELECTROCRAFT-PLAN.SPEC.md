@@ -724,7 +724,7 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.16** (Nov 10, 2026):
+**Status at 0.1.17** (Nov 10, 2026):
 
 | Phase | Status | Done | Remaining |
 | --- | --- | --- | --- |
