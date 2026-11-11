@@ -473,9 +473,9 @@ fn divider(cat: &Catalog) -> Schematic {
     b.finish("Potentiometer Divider", 1e-3, 1e-6)
 }
 
-/// Two 4-bit counters (H and L) form an 8-bit register behind push buttons; two
-/// 74244 buffers form the bus transceiver (send: register to bus, load: bus to
-/// register). No standard part both counts and rotates, so there is no shift button.
+/// Two 4-bit counters (H and L) form an 8-bit register behind push buttons; a
+/// 74244 puts the register on an internal bus and a 74245 transceiver joins that to the
+/// outside bus (send: register to bus, load: bus to register). No standard part both counts and rotates, so there is no shift button.
 fn hex_register(cat: &Catalog) -> Schematic {
     let mut b = start(cat);
     let v = b.part("core.vdc", [-520.0, 0.0], 0, false, &[("V", "5")]);
@@ -504,18 +504,23 @@ fn hex_register(cat: &Catalog) -> Schematic {
         b.note([-420.0, y - 40.0], name);
     }
 
-    // Clock and load glue: loading needs a clock edge, so [load] also clocks both counters.
-    let g1 = b.part("core.not", [60.0, 40.0], 0, false, &[]);
-    b.tie(g1, "A", "nload");
-    b.tie(g1, "Y", "ldp");
-    let g2 = b.part("core.or", [60.0, 140.0], 0, false, &[]);
-    b.tie(g2, "A", "p1");
-    b.tie(g2, "B", "ldp");
-    b.tie(g2, "Y", "clkl");
-    let g3 = b.part("core.or", [60.0, 240.0], 0, false, &[]);
-    b.tie(g3, "A", "p10");
-    b.tie(g3, "B", "ldp");
-    b.tie(g3, "Y", "clkh");
+    // Glue from two 74HC02 quad NOR chips. Loading needs a clock edge, so [load] also
+    // clocks both counters (ldp = not nload); the transceiver is enabled while [send] or
+    // [load] is held (noe = nsend and nload = nor of their inverses).
+    let u1 = b.part("ic.74x02", [60.0, -60.0], 0, false, &[]);
+    let u2 = b.part("ic.74x02", [60.0, 260.0], 0, false, &[]);
+    let nor = |b: &mut B, u: Id, k: u8, a: &str, c: &str, y: &str| {
+        b.tie(u, &format!("A{k}"), a);
+        b.tie(u, &format!("B{k}"), c);
+        b.tie(u, &format!("Y{k}"), y);
+    };
+    nor(&mut b, u1, 1, "nload", "nload", "ldp");
+    nor(&mut b, u1, 2, "nsend", "nsend", "sinv");
+    nor(&mut b, u1, 3, "p1", "ldp", "m1");
+    nor(&mut b, u1, 4, "m1", "m1", "clkl");
+    nor(&mut b, u2, 1, "p10", "ldp", "m10");
+    nor(&mut b, u2, 2, "m10", "m10", "clkh");
+    nor(&mut b, u2, 3, "sinv", "ldp", "noe");
 
     // The register: L is bits 0-3 and H is bits 4-7.
     for (at, clk, lo) in [([400.0, -120.0], "clkl", 0), ([400.0, 160.0], "clkh", 4)] {
@@ -529,25 +534,28 @@ fn hex_register(cat: &Catalog) -> Schematic {
             .into_iter()
             .enumerate()
         {
-            b.tie(u, d, &format!("in{}", lo + k));
+            b.tie(u, d, &format!("ib{}", lo + k));
             b.tie(u, q, &format!("q{}", lo + k));
         }
     }
 
-    // Bus transceiver: U3 drives the register onto the bus, U4 drives the bus into the register.
+    // Internal bus ib0..ib7: the send buffer puts the register on it, and the
+    // counters' parallel inputs read it. The 74245 joins it to the outside bus:
+    // DIR high (idle or [send]) sends it out, [load] pulls DIR low to read the bus in.
     let send = b.part("ic.74x244", [760.0, 160.0], 0, false, &[]);
-    let load = b.part("ic.74x244", [760.0, -160.0], 0, false, &[]);
+    let xcvr = b.part("ic.74x245", [760.0, -160.0], 0, false, &[]);
     for k in 0..8 {
         let n = k + 1;
         b.tie(send, &format!("A{n}"), &format!("q{k}"));
-        b.tie(send, &format!("Y{n}"), &format!("bus{k}"));
-        b.tie(load, &format!("A{n}"), &format!("bus{k}"));
-        b.tie(load, &format!("Y{n}"), &format!("in{k}"));
+        b.tie(send, &format!("Y{n}"), &format!("ib{k}"));
+        b.tie(xcvr, &format!("A{n}"), &format!("ib{k}"));
+        b.tie(xcvr, &format!("B{n}"), &format!("bus{k}"));
     }
     for pin in ["OE1", "OE2"] {
         b.tie(send, pin, "nsend");
-        b.tie(load, pin, "nload");
     }
+    b.tie(xcvr, "DIR", "nload");
+    b.tie(xcvr, "OE", "noe");
 
     // Bus stimulus: close a switch to put a 1 on that line; the buffers overpower it while sending.
     for k in 0..8 {
@@ -735,8 +743,8 @@ mod tests {
             c.set_state(k, "pressed", f64::from(u8::from(hold)));
         };
         let reg = |c: &ecs_sim::Circuit| {
-            let l = c.state(c.instance_index("U4").unwrap(), "n").unwrap();
-            let h = c.state(c.instance_index("U5").unwrap(), "n").unwrap();
+            let l = c.state(c.instance_index("U3").unwrap(), "n").unwrap();
+            let h = c.state(c.instance_index("U4").unwrap(), "n").unwrap();
             (h as u32) << 4 | l as u32
         };
         run(&mut c, 200);

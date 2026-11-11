@@ -124,6 +124,26 @@ impl Ic {
         }
         self
     }
+    /// Bidirectional tri-state pins: an output that can float, read back through a
+    /// watch named `<pin>_in` at half of a 5 V supply.
+    fn io(mut self, pins: &[String], left: bool) -> Self {
+        for p in pins {
+            self.def.pins.push(PinDef {
+                name: p.clone(),
+                kind: PinKind::DigitalOut(String::new()),
+            });
+            self.def.watches.push((
+                format!("{p}_in"),
+                ecs_expr::parse(&format!("V({p}) > 2.5")).expect("watch"),
+            ));
+            if left {
+                self.left.push(p.clone());
+            } else {
+                self.right.push(p.clone());
+            }
+        }
+        self.float(pins)
+    }
     fn analog(mut self, pin: &str, left: bool) -> Self {
         self.def.pins.push(PinDef {
             name: pin.into(),
@@ -526,6 +546,34 @@ fn s74() -> Vec<Ic> {
                         let en = lo(c, if k < 4 { "OE1" } else { "OE2" });
                         let l = c.level(&a2[k]);
                         out3(c, &y2[k], en.then_some(l));
+                    }
+                }),
+        );
+    }
+    // 74245 octal bus transceiver: DIR high sends A to B, low sends B to A; OE high isolates.
+    {
+        let a = names("A", 1..=8);
+        let b = names("B", 1..=8);
+        let (a2, b2) = (a.clone(), b.clone());
+        v.push(
+            ic(t, "245", "octal bus transceiver", "Eight bidirectional bus buffers: with OE low, DIR high drives B from A and DIR low drives A from B; OE high floats both sides.")
+                .io(&a, true)
+                .i(&["DIR", "OE"])
+                .io(&b, false)
+                .eval(move |c| {
+                    let en = lo(c, "OE");
+                    let a_to_b = hi(c, "DIR");
+                    for k in 0..8 {
+                        let (from, to, drive_b) = if a_to_b {
+                            (&a2[k], &b2[k], true)
+                        } else {
+                            (&b2[k], &a2[k], false)
+                        };
+                        let l = c.level(&format!("{from}_in"));
+                        out3(c, to, en.then_some(l));
+                        // The receiving side's partner pin floats.
+                        let idle = if drive_b { &a2[k] } else { &b2[k] };
+                        out3(c, idle, None);
                     }
                 }),
         );
