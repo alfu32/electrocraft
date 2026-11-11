@@ -9,6 +9,6 @@
   "fileTypes": [
     ".ecs"
   ],
-  "note": "Transcribed from the publisher's local packaging/msstore (git-ignored). PFN and Store ID are for validation; they are not AppxManifest elements. MSIX versions add versionMajorOffset to the major (the Store needs major >= 1): app 0.1.6 is package 1.1.6.0.",
+  "note": "Transcribed from the publisher's local packaging/msstore-identity.txt (git-ignored). PFN and Store ID are for validation; they are not AppxManifest elements. MSIX versions add versionMajorOffset to the major (the Store needs major >= 1): app 0.1.6 is package 1.1.6.0.",
   "versionMajorOffset": 1
 }

@@ -135,7 +135,7 @@ def main():
             assert image.size==size and image.format=='PNG'
     results=[]
     count = MAX_DESKTOP_SCREENSHOTS
-    for folder_name in ('microsoft-store', 'microsoft-store-10'):
+    for folder_name in ('microsoft-store', 'microsoft-store-10', 'msstore'):
         folder=BASE.parent / folder_name
         folder.mkdir(exist_ok=True)
         for name in selection[:count]:

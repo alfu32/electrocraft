@@ -1,5 +1,6 @@
 .kode*
 packaging/msstore
+packaging/msstore-identity.txt
 packaging/snapstore
 /target
 /dist
