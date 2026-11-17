@@ -2,6 +2,9 @@
 //! datasheet points, typed in or digitized from a curve image, review the
 //! fit, and export a JavaScript component with a fit report.
 
+// A GUI program on Windows: no console window.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 mod fit;
 #[path = "../../ecs-app/src/theme.rs"]
 #[allow(dead_code)]

@@ -724,7 +724,10 @@ flowchart LR
   V1 --> P8[P8 Datasheet tool]
 ```
 
-**Status at 0.1.20**
+**Status at 0.1.21**
+
+Windows: `electrocraft.exe` and `electrocraft-datasheet.exe` are GUI-subsystem programs, so starting them (from the Start menu, the MSIX or Explorer) opens no console window. `--version`, `--help` and `--command-catalog` still print when started from a shell (the app attaches to the parent console when its standard handles are missing), and `--mcp` keeps using the pipes its client gives it. `electrocraft-cli` stays a console program.
+
 
 Clipboard: Copy and Cut write the selection to the system clipboard as JSON; Ctrl+V and Paste read it (egui-winit delivers Ctrl+C/X/V as Copy/Cut/Paste events, never key presses, so the earlier key handlers never fired). A selection, a whole `.ecs` text or a short note can be pasted.
  (Nov 10, 2026):

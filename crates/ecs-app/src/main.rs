@@ -4,6 +4,10 @@
 //! electrocraft [file.ecs] [--new] [--sample <id>] [--software-canvas] [--version]
 //! ```
 
+// A GUI program on Windows: no console window appears when it is started from the Start menu,
+// the MSIX or Explorer. Command-line output is restored by `attach_parent_console`.
+#![cfg_attr(windows, windows_subsystem = "windows")]
+
 mod analysis_ui;
 mod app;
 mod catalog;
@@ -174,7 +178,46 @@ impl eframe::App for Shell {
     }
 }
 
+/// A GUI-subsystem Windows program starts without standard handles. When a shell started
+/// it, attach to that shell's console so `--version`, `--help` and `--command-catalog`
+/// still print; handles that were redirected (pipes for `--mcp`) are left alone.
+#[cfg(windows)]
+fn attach_parent_console() {
+    use std::os::windows::io::IntoRawHandle;
+    unsafe extern "system" {
+        fn AttachConsole(process_id: u32) -> i32;
+        fn GetStdHandle(which: u32) -> *mut core::ffi::c_void;
+        fn SetStdHandle(which: u32, handle: *mut core::ffi::c_void) -> i32;
+    }
+    const ATTACH_PARENT_PROCESS: u32 = u32::MAX;
+    const STD_OUTPUT_HANDLE: u32 = -11i32 as u32;
+    const STD_ERROR_HANDLE: u32 = -12i32 as u32;
+    // SAFETY: plain Win32 console calls; the opened handles are handed to the process
+    // as its standard handles and live until exit.
+    unsafe {
+        let none = |h: *mut core::ffi::c_void| h.is_null() || h as isize == -1;
+        if !none(GetStdHandle(STD_OUTPUT_HANDLE)) && !none(GetStdHandle(STD_ERROR_HANDLE)) {
+            return;
+        }
+        if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
+            return;
+        }
+        for (which, name) in [
+            (STD_OUTPUT_HANDLE, "CONOUT$"),
+            (STD_ERROR_HANDLE, "CONOUT$"),
+        ] {
+            if none(GetStdHandle(which))
+                && let Ok(f) = std::fs::OpenOptions::new().write(true).open(name)
+            {
+                SetStdHandle(which, f.into_raw_handle().cast());
+            }
+        }
+    }
+}
+
 fn main() -> eframe::Result {
+    #[cfg(windows)]
+    attach_parent_console();
     let args: Vec<String> = std::env::args().skip(1).collect();
     if args.iter().any(|a| a == "--version" || a == "-V") {
         println!("electrocraft {}", env!("CARGO_PKG_VERSION"));
